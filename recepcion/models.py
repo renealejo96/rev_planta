@@ -289,22 +289,25 @@ class EvaluacionVariedad(models.Model):
             self.plantas_por_contenedor = round(self.plantas_recibidas / self.contenedores_recibidos, 2)
             self.muestreo_diez_porciento_exacto = round(self.contenedores_recibidos * 0.10, 2)
             self.contenedores_a_revisar = max(1, math.ceil(self.contenedores_recibidos * 0.10))
+            # Los aseguradores cuentan el 100% de las plantas dentro de las gavetas muestreadas
+            self.plantas_por_contenedor_muestreo = int(round(self.plantas_por_contenedor))
+            self.total_plantas_a_revisar = int(round(self.contenedores_a_revisar * self.plantas_por_contenedor))
         else:
             self.plantas_por_contenedor = 0.0
             self.muestreo_diez_porciento_exacto = 0.0
             self.contenedores_a_revisar = 0
+            self.plantas_por_contenedor_muestreo = 0
+            self.total_plantas_a_revisar = 0
 
-        self.plantas_inicio = 5
-        self.plantas_medio = 5
-        self.plantas_final = 5
-        self.plantas_por_contenedor_muestreo = 15
-        self.total_plantas_a_revisar = self.contenedores_a_revisar * 15
+        self.plantas_inicio = 0
+        self.plantas_medio = 0
+        self.plantas_final = 0
 
 
 class CalificacionParametro(models.Model):
     """
     Valoración individual de cada parámetro para una variedad:
-    3 = Muy Bueno (Óptimo), 2 = Regular, 1 = Muy Malo (Grave) + Observaciones específicas.
+    3 = Muy Bueno (Óptimo), 2 = Regular, 1 = Muy Malo (Grave) + Plantas Afectadas, % de Incidencia y Foto.
     """
     PUNTAJE_CHOICES = [
         (3, "3 - Muy Bueno (Óptimo)"),
@@ -320,6 +323,14 @@ class CalificacionParametro(models.Model):
     codigo_parametro = models.CharField("Código del Parámetro", max_length=60)
     nombre_parametro = models.CharField("Nombre del Parámetro", max_length=140)
     puntaje = models.PositiveSmallIntegerField("Puntaje (1 a 3)", choices=PUNTAJE_CHOICES, default=3)
+    plantas_afectadas = models.PositiveIntegerField("Plantas Afectadas", default=0)
+    porcentaje_afectacion = models.FloatField("Porcentaje de Afectación (%)", default=0.0)
+    foto = models.FileField(
+        "Foto de Evidencia del Parámetro",
+        upload_to="evidencias/parametros/%Y/%m/",
+        null=True,
+        blank=True,
+    )
     observacion = models.TextField("Observaciones del Parámetro", blank=True, default="")
 
     class Meta:
@@ -328,6 +339,7 @@ class CalificacionParametro(models.Model):
         verbose_name_plural = "Calificaciones de Parámetros"
 
     def __str__(self):
+        return f"{self.nombre_parametro}: {self.puntaje}/3 ({self.plantas_afectadas} pl - {self.porcentaje_afectacion:.1f}%)"
         return f"{self.nombre_parametro}: {self.puntaje}/3"
 
 

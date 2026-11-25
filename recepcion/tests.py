@@ -67,11 +67,11 @@ class RecepcionPlantaTests(TestCase):
         # Verificar que el responsable se mapeó automáticamente con el usuario logueado (JUAN DE LA TORRE)
         self.assertEqual(rec_paso2["responsable"], "JUAN DE LA TORRE")
         self.assertEqual(rec_paso2["semana"], "2646")
-        # 1200 + 800 = 2000 plantas; 12 + 8 = 20 bandejas -> 10% = 2 bandejas -> 30 plantas a calificar
+        # 1200 + 800 = 2000 plantas; 12 + 8 = 20 bandejas -> 10% = 2 bandejas -> 100 pl/bandeja * 2 = 200 plantas a calificar
         self.assertEqual(rec_paso2["total_plantas_recibidas"], 2000)
         self.assertEqual(rec_paso2["total_contenedores_recibidos"], 20)
         self.assertEqual(rec_paso2["total_contenedores_muestreados"], 2)
-        self.assertEqual(rec_paso2["total_plantas_muestreadas"], 30)
+        self.assertEqual(rec_paso2["total_plantas_muestreadas"], 200)
 
         # Paso 4: Se completa la calificación actualizando el mismo registro (sin duplicar)
         payload_paso4 = {

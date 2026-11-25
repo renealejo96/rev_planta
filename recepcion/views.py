@@ -10,6 +10,7 @@ import urllib.error
 import urllib.request
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -413,17 +414,44 @@ def api_guardar_recepcion(request):
                     puntaje = max(1, min(3, puntaje))
                     obs = (datos_p.get("observacion") or "").strip()
 
+                    try:
+                        plantas_afectadas = max(0, int(datos_p.get("plantas_afectadas") or 0))
+                    except (ValueError, TypeError):
+                        plantas_afectadas = 0
+
+                    try:
+                        porcentaje_afectacion = max(0.0, float(datos_p.get("porcentaje_afectacion") or 0.0))
+                    except (ValueError, TypeError):
+                        porcentaje_afectacion = 0.0
+
+                    if eval_var.total_plantas_a_revisar > 0 and plantas_afectadas > 0:
+                        porcentaje_afectacion = round((plantas_afectadas / eval_var.total_plantas_a_revisar) * 100.0, 2)
+
                     suma_puntos += puntaje
                     if cod == "empaque" and puntaje == 1:
                         alerta_empaque = True
 
-                    CalificacionParametro.objects.create(
+                    cal_p = CalificacionParametro.objects.create(
                         evaluacion_variedad=eval_var,
                         codigo_parametro=cod,
                         nombre_parametro=mapa_nombres_param.get(cod, cod),
                         puntaje=puntaje,
                         observacion=obs,
+                        plantas_afectadas=plantas_afectadas,
+                        porcentaje_afectacion=porcentaje_afectacion,
                     )
+
+                    foto_b64 = datos_p.get("foto_base64")
+                    if foto_b64 and isinstance(foto_b64, str) and ";base64," in foto_b64:
+                        try:
+                            formato, imgstr = foto_b64.split(";base64,")
+                            ext = formato.split("/")[-1].lower() if "/" in formato else "jpg"
+                            if ext not in ("jpg", "jpeg", "png", "webp"):
+                                ext = "jpg"
+                            nombre_archivo = f"evid_{cod}_{eval_var.id}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
+                            cal_p.foto.save(nombre_archivo, ContentFile(base64.b64decode(imgstr)), save=True)
+                        except Exception as e_f:
+                            pass
 
                 total_params = max(1, len(parametros_activos))
                 calificacion_var = round(suma_puntos / total_params, 2)
@@ -494,6 +522,9 @@ def serializar_recepcion(guia: RecepcionGuia):
                 "nombre": p.nombre_parametro,
                 "puntaje": p.puntaje,
                 "observacion": p.observacion,
+                "plantas_afectadas": p.plantas_afectadas,
+                "porcentaje_afectacion": p.porcentaje_afectacion,
+                "foto_url": p.foto.url if p.foto else "",
             }
             for p in v.parametros.all()
         ]

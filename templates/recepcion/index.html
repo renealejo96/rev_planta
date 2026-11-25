@@ -1300,6 +1300,27 @@
         <!-- ===================================================================== -->
         <section id="vista-recepcion" class="view-panel active">
 
+            <!-- Banner de Guías Validadas por Descargue (Visibles para Asegurador de Calidad) -->
+            <div id="banner-guias-validadas-descargue" style="display: none; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 1.5px solid #38BDF8; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; color: #FFFFFF; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="background: #0284C7; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 5px; text-transform: uppercase;">
+                                Descargue Validado
+                            </span>
+                            <span id="badge-conteo-pendientes-calidad" class="tabular" style="font-size: 12px; font-weight: 800; color: #4ADE80;"></span>
+                        </div>
+                        <div style="font-size: 15px; font-weight: 800; color: #FFFFFF; margin-top: 4px;">
+                            📦 Guías Listas para Auditoría de Calidad
+                        </div>
+                        <div style="font-size: 12px; color: #CBD5E1; margin-top: 2px;">
+                            El personal de descargue ya validó estas recepciones. Pulsa sobre cualquiera para cargarla directamente a la revisión de planta (Paso 4):
+                        </div>
+                    </div>
+                </div>
+                <div id="lista-pills-guias-validadas" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;"></div>
+            </div>
+
             <div class="stepper-bar">
                 <div class="step-pill active" id="pill-step-1" onclick="irAPaso(1)">
                     <span class="s-num">1</span>
@@ -1315,7 +1336,7 @@
                 </div>
                 <div class="step-pill" id="pill-step-4" onclick="irAPaso(4)">
                     <span class="s-num">4</span>
-                    <span>4. Calificar</span>
+                    <span>{% if rol_usuario == "DESCARGUE" %}4. Calidad 🔒{% else %}4. Calificar{% endif %}</span>
                 </div>
             </div>
 
@@ -1816,6 +1837,9 @@
                     <p class="card-subtitle" id="modal-subtitulo" style="color: #A7F3D0;"></p>
                 </div>
                 <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-action" id="btn-modal-wa" style="height: 32px; font-size: 12px; background: #25D366; color: #052E16; font-weight: 800;">
+                        📲 Ficha WhatsApp
+                    </button>
                     <button type="button" class="btn-action" id="btn-modal-editar" style="height: 32px; font-size: 12px; background: #2563EB;">
                         ✏️ Editar / Corregir
                     </button>
@@ -1823,6 +1847,108 @@
                 </div>
             </div>
             <div class="card-body" id="modal-cuerpo"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Ficha Resumen y Collage para WhatsApp -->
+    <div id="modal-ficha-whatsapp" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;" onclick="if(event.target===this) cerrarFichaResumenWhatsapp()">
+        <div class="modal-dialog" style="max-width: 560px; background: #0F172A; border: 2px solid #38BDF8; color: #FFFFFF;">
+            <div class="card-header" style="background: #1E293B; border-bottom: 1.5px solid #334155; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">📲</span>
+                    <div>
+                        <h3 class="card-title" style="color: #FFFFFF; font-size: 15px;">Ficha Resumen para WhatsApp</h3>
+                        <p class="card-subtitle" style="color: #38BDF8; font-size: 11px;">Captura de pantalla limpia para enviar al grupo técnico / agronómico</p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-action" style="height: 32px; font-size: 12px; background: #25D366; color: #052E16; font-weight: 800;" onclick="copiarReporteTextoWhatsapp()">
+                        📋 Copiar Texto
+                    </button>
+                    <button type="button" class="btn-remove" style="height: 32px; padding: 0 10px;" onclick="cerrarFichaResumenWhatsapp()">✕ Cerrar</button>
+                </div>
+            </div>
+            <div class="card-body" style="padding: 16px; background: #0B1120;">
+                <!-- Tarjeta Infográfica / Ficha Técnica para Captura -->
+                <div id="tarjeta-captura-whatsapp" style="background: #111827; border: 1.5px solid #374151; border-radius: 14px; padding: 16px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+                    <!-- Cabecera Institucional -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #374151; padding-bottom: 10px; margin-bottom: 12px; gap: 10px;">
+                        <div>
+                            <span style="background: #15803D; color: #DCFCE7; font-size: 9.5px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">
+                                🌿 CONTROL DE CALIDAD · PLANTA
+                            </span>
+                            <h2 id="wa-producto-variedad" style="font-size: 18px; font-weight: 800; color: #FFFFFF; margin-top: 4px; line-height: 1.2;">
+                                PRODUCTO · VARIEDAD
+                            </h2>
+                            <div id="wa-factura-guia" style="font-size: 11.5px; color: #9CA3AF; margin-top: 2px;">
+                                Factura: S/N · Guía: REC
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 9.5px; color: #9CA3AF; text-transform: uppercase;">Calificación Global</div>
+                            <div id="wa-badge-calidad" style="font-size: 17px; font-weight: 800; color: #4ADE80;">
+                                100% · ÓPTIMO
+                            </div>
+                            <div id="wa-fecha-auditor" style="font-size: 10.5px; color: #D1D5DB; margin-top: 2px;">
+                                Fecha · Sem
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Métricas Clave de Muestreo (10% real) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        <div style="background: #1F2937; border-radius: 8px; padding: 8px 10px;">
+                            <div style="font-size: 9.5px; color: #9CA3AF; text-transform: uppercase;">Llegaron Físico</div>
+                            <div id="wa-stat-llegaron" style="font-size: 15px; font-weight: 800; color: #38BDF8;">
+                                0 pl
+                            </div>
+                            <div id="wa-stat-gavetas" style="font-size: 10.5px; color: #D1D5DB;">
+                                0 unidades
+                            </div>
+                        </div>
+                        <div style="background: #1F2937; border-radius: 8px; padding: 8px 10px;">
+                            <div style="font-size: 9.5px; color: #9CA3AF; text-transform: uppercase;">Muestreo 10% (100% Gavetas)</div>
+                            <div id="wa-stat-muestreadas" style="font-size: 15px; font-weight: 800; color: #FCD34D;">
+                                0 gavetas
+                            </div>
+                            <div id="wa-stat-pl-revisadas" style="font-size: 10.5px; color: #4ADE80;">
+                                0 pl evaluadas
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Novedades de Descargue si existen -->
+                    <div id="wa-alerta-descargue" style="display: none; background: rgba(245, 158, 11, 0.15); border: 1px solid #F59E0B; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; font-size: 11px; color: #FDE047;">
+                        <strong>⚠️ Novedad en Descargue:</strong> <span id="wa-descargue-txt"></span>
+                    </div>
+
+                    <!-- Collage de Hallazgos y Defectos con Fotos -->
+                    <div id="wa-seccion-hallazgos">
+                        <div style="font-size: 11px; font-weight: 800; color: #F87171; text-transform: uppercase; margin-bottom: 6px;">
+                            ⚠️ Hallazgos y Parámetros con Afectación:
+                        </div>
+                        <div id="wa-lista-hallazgos" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    </div>
+
+                    <!-- Parámetros Óptimos -->
+                    <div id="wa-seccion-optimos" style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed #374151;">
+                        <div style="font-size: 10.5px; color: #4ADE80; font-weight: 700; margin-bottom: 5px;">
+                            ✓ Parámetros Conformes (100% Óptimos):
+                        </div>
+                        <div id="wa-lista-optimos" style="line-height: 1.6;"></div>
+                    </div>
+
+                    <!-- Pie de Ficha con Auditor -->
+                    <div style="margin-top: 12px; padding-top: 8px; border-top: 1.5px solid #374151; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #6B7280;">
+                        <span>📱 Sistema de Recepción y Calidad de Planta</span>
+                        <span id="wa-auditor-firma">Auditor: </span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 10px; font-size: 11.5px; color: #94A3B8;">
+                    📸 <em>Haz captura de pantalla a la tarjeta para compartir en WhatsApp.</em>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2114,7 +2240,8 @@
             const plantasPorContenedor = p / c;
             const diezExacto = c * 0.10;
             const contenedoresARevisar = Math.max(1, Math.ceil(c * 0.10));
-            const totalPlantasARevisar = contenedoresARevisar * 15;
+            // Los chicos cuentan el 100% de las plantas de las gavetas muestreadas
+            const totalPlantasARevisar = Math.round(contenedoresARevisar * plantasPorContenedor);
 
             let partesCont = [];
             if (contBandejas > 0) partesCont.push(`${contBandejas} ${contBandejas === 1 ? 'bandeja' : 'bandejas'}`);
@@ -2595,7 +2722,7 @@
                             </div>
                         </div>
                         <div style="color: #FDE047; font-size: 12.5px; font-weight: 700; padding: 4px 0;">
-                            👆 Selecciona arriba si llegó en <strong>Bandejas o Gavetas</strong> e ingresa cuántas unidades llegaron en cada factura para calcular automáticamente el <strong>10% y las 15 plantas (5-5-5)</strong>.
+                            👆 Selecciona arriba si llegó en <strong>Bandejas o Gavetas</strong> e ingresa cuántas unidades llegaron para calcular automáticamente el <strong>10% y el total de plantas a contar</strong>.
                         </div>
                     </div>
                 `;
@@ -2607,7 +2734,7 @@
                     <div class="muestreo-explicativo-header">
                         <div>
                             <div style="font-size: 11px; color: #38BDF8; font-weight: 800; text-transform: uppercase;">
-                                🌿 ${pmNom} · Variedad ${posRelativa} de ${totalEnFiltro} · Instrucciones de Revisión para el Monitor
+                                🌿 ${pmNom} · Variedad ${posRelativa} de ${totalEnFiltro} · Muestreo 10% de Calidad
                             </div>
                             <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 17px; font-weight: 800; color: #FFFFFF; text-transform: none; margin-top: 2px;">
                                 ${itemVar.variedad}
@@ -2628,17 +2755,25 @@
                         <span class="step-val" style="color: #E2E8F0; font-size: 11.5px; white-space: normal;">${rastreoTxt}</span>
                     </div>
                     <div class="muestreo-explicativo-step">
-                        <span class="step-lbl">1. <strong>Primera Revisión</strong> (Plantas que vienen por cada ${m.nombreUnidadSingular}):</span>
-                        <span class="step-val" style="color: #38BDF8;">${m.plantasPorContenedor.toFixed(1)} plantas / ${m.nombreUnidadSingular}</span>
+                        <span class="step-lbl">1. <strong>Plantas por ${m.nombreUnidadSingular}</strong> (Promedio de carga):</span>
+                        <span class="step-val" style="color: #38BDF8;">${Math.round(m.plantasPorContenedor)} plantas / ${m.nombreUnidadSingular}</span>
                     </div>
                     <div class="muestreo-explicativo-step">
-                        <span class="step-lbl">2. <strong>Monitorear el 10%</strong> de ${m.nombreUnidadPlural} que llegaron (10% = ${m.diezExacto.toFixed(1)}):</span>
-                        <span class="step-val">Revisar ${m.contenedoresARevisar} ${etiqRev}</span>
+                        <span class="step-lbl">2. <strong>Monitorear el 10%</strong> de ${m.nombreUnidadPlural} recibidas (10% = ${m.diezExacto.toFixed(1)}):</span>
+                        <span class="step-val" style="color: #FCD34D; font-weight: 800;">Revisar ${m.contenedoresARevisar} ${etiqRev}</span>
                     </div>
                     <div class="muestreo-explicativo-step">
-                        <span class="step-lbl">3. <strong>Plantas a calificar</strong> (15 por ${m.nombreUnidadSingular}: <strong>5 al inicio, 5 al medio y 5 al final</strong>):</span>
-                        <span class="step-val" style="color: #FDE047; font-size: 13.5px;">${m.totalPlantasARevisar} plantas a revisar</span>
+                        <span class="step-lbl">3. <strong>Total de Plantas a Contar</strong> (100% de las ${m.contenedoresARevisar} ${etiqRev} muestreadas):</span>
+                        <span class="step-val" style="color: #4ADE80; font-size: 14.5px; font-weight: 800;">
+                            ${m.totalPlantasARevisar.toLocaleString()} plantas
+                            <span style="font-size: 11px; color: #CBD5E1; font-weight: 600;">(${m.contenedoresARevisar} × ${Math.round(m.plantasPorContenedor)} pl)</span>
+                        </span>
                     </div>
+                    ${m.contenedoresARevisar >= 15 ? `
+                    <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid #F59E0B; border-radius: 8px; padding: 6px 10px; margin-top: 6px; font-size: 11.5px; color: #FDE047;">
+                        📍 <strong>Muestreo de 15 gavetas en camión:</strong> Toma 5 gavetas del inicio, 5 del medio y 5 del final del furgón para máxima representatividad.
+                    </div>
+                    ` : ''}
                 </div>
             `;
         }
@@ -3863,11 +3998,32 @@
 
             PARAMETROS_CALIDAD.forEach(p => {
                 if (!itemVar.parametros[p.codigo]) {
-                    itemVar.parametros[p.codigo] = { puntaje: 3, observacion: "" };
+                    itemVar.parametros[p.codigo] = {
+                        puntaje: 3,
+                        observacion: "",
+                        plantas_afectadas: 0,
+                        porcentaje: 0,
+                        foto_url: "",
+                        foto_base64: "",
+                    };
                 }
                 const st = itemVar.parametros[p.codigo];
-                const pts = st.puntaje;
-                const cardCls = pts === 1 ? "score-1" : (pts === 2 ? "score-2" : "");
+                const pts = parseInt(st.puntaje, 10) || 3;
+                const plAfectadas = parseInt(st.plantas_afectadas, 10) || 0;
+                const totMuestreo = m.totalPlantasARevisar || 1;
+                const pctCalc = plAfectadas > 0 ? ((plAfectadas / totMuestreo) * 100).toFixed(1) : "0.0";
+                const tieneDefecto = plAfectadas > 0 || pts < 3 || Boolean(st.foto_url);
+                const cardCls = pts === 1 ? "score-1" : (pts === 2 ? "score-2" : (plAfectadas > 0 ? "score-2" : ""));
+
+                let pctBadgeColor = "#64748B";
+                let pctBadgeBg = "#F1F5F9";
+                if (parseFloat(pctCalc) > 5.0) {
+                    pctBadgeColor = "#DC2626";
+                    pctBadgeBg = "#FEE2E2";
+                } else if (parseFloat(pctCalc) > 0.0) {
+                    pctBadgeColor = "#D97706";
+                    pctBadgeBg = "#FEF3C7";
+                }
 
                 const chipsHtml = (p.sugerencias || []).map(sug => {
                     const sugSafe = sug.replace(/'/g, "\\'");
@@ -3875,15 +4031,21 @@
                 }).join("");
 
                 html += `
-                    <div class="param-mobile-card ${cardCls}" id="pcard-${p.codigo}">
+                    <div class="param-mobile-card ${cardCls}" id="pcard-${p.codigo}" style="${tieneDefecto ? 'border-width: 1.5px;' : ''}">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
                             <div>
                                 <div style="font-weight: 800; font-size: 13.5px; color: var(--ink-primary);">${p.nombre}</div>
                                 <div style="font-size: 11px; color: var(--ink-muted);">${p.descripcion}</div>
                             </div>
-                            ${p.es_critico ? '<span class="badge-status badge-muy-malo" style="font-size:9px;">Crítico</span>' : ''}
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                ${p.es_critico ? '<span class="badge-status badge-muy-malo" style="font-size:9px;">Crítico</span>' : ''}
+                                <span class="badge-afectacion-item" id="pct-badge-${p.codigo}" style="background: ${pctBadgeBg}; color: ${pctBadgeColor}; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 6px;">
+                                    ${pctCalc}%
+                                </span>
+                            </div>
                         </div>
 
+                        <!-- Selector de Gravedad 1, 2, 3 -->
                         <div class="score-selector-mobile">
                             <button type="button" class="score-btn btn-3 ${pts === 3 ? 'selected' : ''}"
                                 onclick="seleccionarPuntajePaso3('${p.codigo}', 3)">
@@ -3899,6 +4061,35 @@
                                 onclick="seleccionarPuntajePaso3('${p.codigo}', 1)">
                                 <span class="num">1</span>
                                 <span class="lbl">Grave</span>
+                            </button>
+                        </div>
+
+                        <!-- Plantas Afectadas y Foto de Evidencia por Ítem -->
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin: 8px 0; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <label style="font-size: 11.5px; font-weight: 700; color: #334155; white-space: nowrap;">🌱 Plantas Afectadas:</label>
+                                <input type="number" inputmode="numeric" min="0" max="${totMuestreo}" class="field-input tabular"
+                                    style="height: 32px; font-size: 13px; font-weight: 800; width: 75px; padding: 0 6px; text-align: center; ${plAfectadas > 0 ? 'border-color: #F59E0B; background: #FFFBEB; color: #B45309;' : ''}"
+                                    value="${plAfectadas > 0 ? plAfectadas : ''}"
+                                    placeholder="0"
+                                    oninput="actualizarPlantasAfectadasParametro('${p.codigo}', this.value)">
+                                <span style="font-size: 10.5px; color: #64748B;">/ ${totMuestreo}</span>
+                            </div>
+
+                            <label class="btn-action" style="background: #0F172A; color: #38BDF8; font-size: 11px; font-weight: 700; height: 32px; padding: 0 10px; cursor: pointer; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                📷 + Foto
+                                <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="cargarFotoParametro('${p.codigo}', this)">
+                            </label>
+                        </div>
+
+                        <!-- Miniatura de Foto cargada en este parámetro -->
+                        <div id="preview-foto-wrap-${p.codigo}" style="${st.foto_url ? 'display: flex;' : 'display: none;'} align-items: center; gap: 8px; background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px;">
+                            <img id="img-preview-${p.codigo}" src="${st.foto_url || ''}" alt="Evidencia ${p.nombre}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1.5px solid #22C55E; cursor: pointer;" onclick="abrirFotoGrande('${st.foto_url || ''}')">
+                            <div style="flex: 1; font-size: 11px; color: #166534; font-weight: 700;">
+                                ✓ Foto de evidencia adjunta
+                            </div>
+                            <button type="button" class="btn-remove" style="height: 26px; padding: 0 8px; font-size: 10.5px;" onclick="quitarFotoParametro('${p.codigo}')">
+                                ✕ Quitar
                             </button>
                         </div>
 
@@ -3931,15 +4122,22 @@
                         <div style="font-size: 12px; color: ${estaPMCalificado ? '#166534' : '#1D4ED8'}; margin-top: 3px;">
                             ${estaPMCalificado
                                 ? `Este producto ya está validado. Si realizas cambios en los parámetros, pulsa de nuevo para actualizar.`
-                                : `Revisa los parámetros y muestreo 10% de las variedades de ${pmActual}. Al pulsar guardar, se valida su calificación y se avanza al siguiente.`
+                                : `Revisa los parámetros y muestreo 10% de las variedades de ${pmActual}. Al pulsar guardar, se valida su calificación.`
                             }
                         </div>
                     </div>
-                    <button type="button" class="btn-action"
-                        style="background: ${estaPMCalificado ? '#15803D' : '#2563EB'}; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 18px; font-size: 13px;"
-                        onclick="validarYGuardarCalificacionPM('${pmActual}')">
-                        ${estaPMCalificado ? `💾 Guardar Cambios en ${pmActual}` : `💾 Validar y Guardar Calificación de ${pmActual}`}
-                    </button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="btn-action"
+                            style="background: #25D366; color: #052E16; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3);"
+                            onclick="abrirFichaResumenWhatsapp()">
+                            📲 Ficha / Collage WhatsApp
+                        </button>
+                        <button type="button" class="btn-action"
+                            style="background: ${estaPMCalificado ? '#15803D' : '#2563EB'}; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 18px; font-size: 13px; border-radius: 8px;"
+                            onclick="validarYGuardarCalificacionPM('${pmActual}')">
+                            ${estaPMCalificado ? `💾 Guardar Cambios en ${pmActual}` : `💾 Validar y Guardar Calificación de ${pmActual}`}
+                        </button>
+                    </div>
                 </div>
             `;
 
@@ -4016,6 +4214,399 @@
             guardarBorradorLocal();
         }
 
+        function actualizarPlantasAfectadasParametro(codParam, valor) {
+            const itemVar = variedadesAgregadas[indiceVariedadPaso3];
+            if (!itemVar) return;
+            if (!itemVar.parametros[codParam]) {
+                itemVar.parametros[codParam] = { puntaje: 3, observacion: "", plantas_afectadas: 0, porcentaje: 0, foto_url: "", foto_base64: "" };
+            }
+            const st = itemVar.parametros[codParam];
+            const pl = Math.max(0, parseInt(valor, 10) || 0);
+            st.plantas_afectadas = pl;
+
+            const m = calcularMuestreoDetallado(itemVar);
+            const totMuestreo = m.totalPlantasARevisar || 1;
+            const pct = pl > 0 ? ((pl / totMuestreo) * 100) : 0;
+            st.porcentaje = Math.round(pct * 100) / 100;
+
+            const badge = document.getElementById(`pct-badge-${codParam}`);
+            if (badge) {
+                badge.textContent = `${pct.toFixed(1)}%`;
+                if (pct > 5.0) {
+                    badge.style.background = "#FEE2E2";
+                    badge.style.color = "#DC2626";
+                } else if (pct > 0.0) {
+                    badge.style.background = "#FEF3C7";
+                    badge.style.color = "#D97706";
+                } else {
+                    badge.style.background = "#F1F5F9";
+                    badge.style.color = "#64748B";
+                }
+            }
+
+            // Si hay plantas afectadas y el puntaje estaba en 3 (Óptimo), sugerir/auto-cambiar gravedad
+            if (pl > 0 && st.puntaje === 3) {
+                if (pct >= 10.0) {
+                    seleccionarPuntajePaso3(codParam, 1);
+                } else {
+                    seleccionarPuntajePaso3(codParam, 2);
+                }
+            } else if (pl === 0 && st.puntaje < 3 && (!st.observacion || !st.observacion.trim())) {
+                seleccionarPuntajePaso3(codParam, 3);
+            }
+
+            const card = document.getElementById(`pcard-${codParam}`);
+            if (card) {
+                card.classList.toggle("score-1", st.puntaje === 1);
+                card.classList.toggle("score-2", st.puntaje === 2 || pl > 0);
+                card.style.borderWidth = (pl > 0 || st.puntaje < 3) ? "1.5px" : "1px";
+            }
+
+            const cal = calcularCalificacionVariedad(itemVar);
+            const hdr = document.getElementById("header-score-paso3");
+            if (hdr) hdr.textContent = `${cal.porcentaje.toFixed(1)}%`;
+
+            guardarBorradorLocal();
+        }
+
+        async function cargarFotoParametro(codParam, inputEl) {
+            const file = inputEl.files && inputEl.files[0];
+            if (!file) return;
+
+            mostrarToast("📸 Cargando foto de evidencia...");
+            try {
+                const fotoComprimida = await redimensionarFotoParametroCliente(file);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const dataUrl = e.target.result;
+                    const itemVar = variedadesAgregadas[indiceVariedadPaso3];
+                    if (!itemVar) return;
+                    if (!itemVar.parametros[codParam]) {
+                        itemVar.parametros[codParam] = { puntaje: 3, observacion: "", plantas_afectadas: 0, porcentaje: 0, foto_url: "", foto_base64: "" };
+                    }
+                    itemVar.parametros[codParam].foto_url = dataUrl;
+                    itemVar.parametros[codParam].foto_base64 = dataUrl;
+
+                    const wrap = document.getElementById(`preview-foto-wrap-${codParam}`);
+                    const img = document.getElementById(`img-preview-${codParam}`);
+                    if (wrap && img) {
+                        img.src = dataUrl;
+                        wrap.style.display = "flex";
+                    }
+
+                    guardarBorradorLocal();
+                    mostrarToast("✅ Foto de hallazgo adjunta.");
+                };
+                reader.readAsDataURL(fotoComprimida);
+            } catch (err) {
+                mostrarToast("⚠️ Error al cargar la foto.", true);
+            }
+        }
+
+        function quitarFotoParametro(codParam) {
+            const itemVar = variedadesAgregadas[indiceVariedadPaso3];
+            if (itemVar && itemVar.parametros[codParam]) {
+                itemVar.parametros[codParam].foto_url = "";
+                itemVar.parametros[codParam].foto_base64 = "";
+            }
+            const wrap = document.getElementById(`preview-foto-wrap-${codParam}`);
+            const img = document.getElementById(`img-preview-${codParam}`);
+            if (wrap && img) {
+                img.src = "";
+                wrap.style.display = "none";
+            }
+            guardarBorradorLocal();
+            mostrarToast("Foto eliminada.");
+        }
+
+        function abrirFotoGrande(url) {
+            if (!url) return;
+            const w = window.open("");
+            if (w) {
+                w.document.write(`<title>Evidencia de Calidad</title><body style="margin:0;background:#0F172A;display:flex;align-items:center;justify-content:center;height:100vh;"><img src="${url}" style="max-width:98vw;max-height:98vh;object-fit:contain;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.5);"></body>`);
+            } else {
+                window.open(url, "_blank");
+            }
+        }
+
+        function redimensionarFotoParametroCliente(file) {
+            return new Promise((resolve) => {
+                if (!file.type || !file.type.startsWith("image/")) {
+                    resolve(file);
+                    return;
+                }
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    let w = img.width;
+                    let h = img.height;
+                    const maxDim = 1200;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                    }
+                    const canvas = document.createElement("canvas");
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, w, h);
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+                            } else {
+                                resolve(file);
+                            }
+                        },
+                        "image/jpeg",
+                        0.85
+                    );
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(file);
+                };
+                img.src = url;
+            });
+        }
+
+        function abrirFichaResumenWhatsapp(itemVarParam = null) {
+            const itemVar = itemVarParam || variedadesAgregadas[indiceVariedadPaso3];
+            if (!itemVar) {
+                mostrarToast("⚠️ No hay variedad seleccionada para generar la ficha.", true);
+                return;
+            }
+
+            const m = calcularMuestreoDetallado(itemVar);
+            const cal = calcularCalificacionVariedad(itemVar);
+            const pm = itemVar.producto_maestro || filtroPMPaso3 || "GENERAL";
+            const fac = document.getElementById("input-numero-factura")?.value || "S/N";
+            const guiaCod = document.getElementById("input-codigo-guia")?.value || "REC";
+            const fec = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
+            const sem = document.getElementById("lbl-semana-calculada")?.textContent || "";
+            const auditor = document.getElementById("input-responsable")?.value || RESPONSABLE_SESION;
+
+            let fechaFmt = fec;
+            try {
+                const [y, mm, d] = fec.split("-");
+                if (d && mm && y) fechaFmt = `${d}/${mm}/${y}`;
+            } catch (e) {}
+
+            document.getElementById("wa-producto-variedad").textContent = `${pm} · ${itemVar.variedad}`;
+            document.getElementById("wa-factura-guia").textContent = `Factura(s): ${fac} · Guía: ${guiaCod}`;
+            document.getElementById("wa-fecha-auditor").textContent = `${fechaFmt} · Sem ${sem}`;
+            const auditorEl = document.getElementById("wa-auditor-firma");
+            if (auditorEl) auditorEl.textContent = `Auditor: ${auditor}`;
+
+            const badgeCal = document.getElementById("wa-badge-calidad");
+            if (badgeCal) {
+                const estadoTxt = cal.porcentaje >= 86.6 ? "ÓPTIMO" : (cal.porcentaje >= 61.6 ? "REGULAR" : "GRAVE");
+                badgeCal.textContent = `${cal.porcentaje.toFixed(1)}% · ${estadoTxt}`;
+                badgeCal.style.color = cal.porcentaje >= 86.6 ? "#4ADE80" : (cal.porcentaje >= 61.6 ? "#FCD34D" : "#F87171");
+            }
+
+            document.getElementById("wa-stat-llegaron").textContent = `${(itemVar.plantas_recibidas || 0).toLocaleString()} pl`;
+            document.getElementById("wa-stat-gavetas").textContent = `${m.resumenUnidades || `${itemVar.contenedores_recibidos} unidades`} (~${Math.round(m.plantasPorContenedor)} pl/gav)`;
+            document.getElementById("wa-stat-muestreadas").textContent = `${m.contenedoresARevisar} ${m.nombreUnidadPlural}`;
+            document.getElementById("wa-stat-pl-revisadas").textContent = `${(m.totalPlantasARevisar || 0).toLocaleString()} pl contadas`;
+
+            const alertaDesc = document.getElementById("wa-alerta-descargue");
+            const txtDesc = document.getElementById("wa-descargue-txt");
+            if (alertaDesc && txtDesc) {
+                if (tieneNovedadesDescargue || observacionesDescargue) {
+                    alertaDesc.style.display = "block";
+                    txtDesc.textContent = observacionesDescargue || "Discrepancias en bultos o daños físicos reportados.";
+                } else {
+                    alertaDesc.style.display = "none";
+                }
+            }
+
+            const contenedorHallazgos = document.getElementById("wa-lista-hallazgos");
+            const seccionHallazgos = document.getElementById("wa-seccion-hallazgos");
+            const listaOptimos = document.getElementById("wa-lista-optimos");
+
+            let htmlHallazgos = "";
+            let itemsOptimos = [];
+
+            PARAMETROS_CALIDAD.forEach(p => {
+                const st = itemVar.parametros[p.codigo] || { puntaje: 3, plantas_afectadas: 0, observacion: "", foto_url: "" };
+                const pl = st.plantas_afectadas || 0;
+                const pts = st.puntaje || 3;
+                const tot = m.totalPlantasARevisar || 1;
+                const pct = pl > 0 ? ((pl / tot) * 100).toFixed(1) : "0.0";
+                const tieneDefecto = pl > 0 || pts < 3 || Boolean(st.foto_url);
+
+                if (tieneDefecto) {
+                    const badgeNivel = pts === 1
+                        ? '<span style="background: #991B1B; color: #FECACA; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">1 · GRAVE</span>'
+                        : (pts === 2
+                            ? '<span style="background: #92400E; color: #FDE68A; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">2 · REGULAR</span>'
+                            : '<span style="background: #14532D; color: #BBF7D0; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">3 · LEVE</span>');
+
+                    htmlHallazgos += `
+                        <div style="background: #1E293B; border: 1.5px solid ${pts === 1 ? '#EF4444' : '#F59E0B'}; border-radius: 10px; padding: 10px; display: flex; gap: 12px; align-items: center;">
+                            ${st.foto_url ? `
+                                <img src="${st.foto_url}" alt="${p.nombre}" style="width: 58px; height: 58px; object-fit: cover; border-radius: 8px; border: 1.5px solid #38BDF8; flex-shrink: 0; cursor: pointer;" onclick="abrirFotoGrande('${st.foto_url}')">
+                            ` : `
+                                <div style="width: 44px; height: 44px; background: #334155; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+                                    ⚠️
+                                </div>
+                            `}
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <strong style="color: #FFFFFF; font-size: 13px;">${p.nombre}</strong>
+                                    ${badgeNivel}
+                                </div>
+                                <div style="font-size: 12px; color: ${pl > 0 ? '#FDE047' : '#94A3B8'}; margin-top: 2px;">
+                                    ${pl > 0 ? `<strong>${pl} plantas afectadas</strong> (${pct}% de incidencia)` : 'Novedad técnica observada'}
+                                </div>
+                                ${st.observacion ? `
+                                    <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px; font-style: italic;">
+                                        "${st.observacion}"
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    itemsOptimos.push(p.nombre_corto || p.nombre);
+                }
+            });
+
+            if (htmlHallazgos) {
+                seccionHallazgos.style.display = "block";
+                contenedorHallazgos.innerHTML = htmlHallazgos;
+            } else {
+                seccionHallazgos.style.display = "none";
+                contenedorHallazgos.innerHTML = "";
+            }
+
+            listaOptimos.innerHTML = itemsOptimos.map(nom => `
+                <span style="display: inline-block; background: rgba(34, 197, 94, 0.15); color: #86EFAC; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; margin: 2px 3px 2px 0;">
+                    ✓ ${nom}
+                </span>
+            `).join("");
+
+            document.getElementById("modal-ficha-whatsapp").style.display = "flex";
+        }
+
+        function cerrarFichaResumenWhatsapp() {
+            document.getElementById("modal-ficha-whatsapp").style.display = "none";
+        }
+
+        function copiarReporteTextoWhatsapp() {
+            const itemVar = variedadesAgregadas[indiceVariedadPaso3];
+            if (!itemVar) return;
+            const m = calcularMuestreoDetallado(itemVar);
+            const cal = calcularCalificacionVariedad(itemVar);
+            const pm = itemVar.producto_maestro || filtroPMPaso3 || "GENERAL";
+            const fac = document.getElementById("input-numero-factura")?.value || "S/N";
+            const fec = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
+            const sem = document.getElementById("lbl-semana-calculada")?.textContent || "";
+            const auditor = document.getElementById("input-responsable")?.value || RESPONSABLE_SESION;
+
+            let txt = `🌿 *CONTROL DE CALIDAD - RECEPCIÓN DE PLANTA*\n`;
+            txt += `📅 *Fecha:* ${fec} (Sem ${sem})\n`;
+            txt += `📄 *Factura:* ${fac}\n`;
+            txt += `🌱 *Producto:* ${pm} - ${itemVar.variedad}\n`;
+            txt += `👤 *Asegurador:* ${auditor}\n\n`;
+
+            txt += `📊 *MUESTREO Y RECEPCIÓN:*\n`;
+            txt += `• *Plantas recibidas:* ${(itemVar.plantas_recibidas || 0).toLocaleString()} pl en ${m.resumenUnidades || `${itemVar.contenedores_recibidos} unidades`} (~${Math.round(m.plantasPorContenedor)} pl/gaveta)\n`;
+            txt += `• *Muestreo 10%:*\n`;
+            txt += `  - Monitoreadas: ${m.contenedoresARevisar} ${m.nombreUnidadPlural}\n`;
+            txt += `  - Plantas evaluadas: ${(m.totalPlantasARevisar || 0).toLocaleString()} pl (100% de gavetas)\n`;
+            txt += `• *Calificación Global:* ${cal.porcentaje.toFixed(1)}% (${cal.porcentaje >= 86.6 ? 'MUY BUENO' : (cal.porcentaje >= 61.6 ? 'REGULAR' : 'MUY MALO')})\n\n`;
+
+            if (tieneNovedadesDescargue || observacionesDescargue) {
+                txt += `⚠️ *NOVEDADES DE DESCARGUE (Furgón):*\n${observacionesDescargue || 'Novedades reportadas en transporte/descargue'}\n\n`;
+            }
+
+            const hallazgos = [];
+            const conformes = [];
+
+            PARAMETROS_CALIDAD.forEach(p => {
+                const st = itemVar.parametros[p.codigo] || { puntaje: 3, plantas_afectadas: 0, observacion: "" };
+                const pl = st.plantas_afectadas || 0;
+                const pts = st.puntaje || 3;
+                const tot = m.totalPlantasARevisar || 1;
+                const pct = pl > 0 ? ((pl / tot) * 100).toFixed(1) : "0.0";
+
+                if (pl > 0 || pts < 3) {
+                    const nivel = pts === 1 ? "GRAVE (1/3)" : (pts === 2 ? "REGULAR (2/3)" : "LEVE");
+                    let linea = `• *${p.nombre}:* ${pl > 0 ? `${pl} pl (${pct}%)` : ''} - [${nivel}]`;
+                    if (st.observacion) linea += `\n  ↳ _Obs: ${st.observacion}_`;
+                    if (st.foto_url) linea += ` 📷 (con foto)`;
+                    hallazgos.push(linea);
+                } else {
+                    conformes.push(p.nombre_corto || p.nombre);
+                }
+            });
+
+            if (hallazgos.length > 0) {
+                txt += `⚠️ *HALLAZGOS Y AFECTACIONES:*\n${hallazgos.join('\n')}\n\n`;
+            } else {
+                txt += `✅ *HALLAZGOS:* Lote 100% conforme, sin defectos detectados.\n\n`;
+            }
+
+            if (conformes.length > 0) {
+                txt += `✅ *Parámetros Óptimos:* ${conformes.join(', ')}\n`;
+            }
+
+            navigator.clipboard.writeText(txt).then(() => {
+                mostrarToast("📋 ¡Reporte para WhatsApp copiado al portapapeles!");
+            }).catch(() => {
+                mostrarToast("⚠️ Copia manualmente el texto mostrado.", true);
+            });
+        }
+
+        async function abrirFichaWhatsappDesdeHistorial(id) {
+            cerrarModalDetalle();
+            await cargarRecepcionParaEditar(id, 4);
+            abrirFichaResumenWhatsapp();
+        }
+
+        function renderizarBannerGuiasPendientesCalidad() {
+            const banner = document.getElementById("banner-guias-validadas-descargue");
+            const lista = document.getElementById("lista-pills-guias-validadas");
+            const badge = document.getElementById("badge-conteo-pendientes-calidad");
+            if (!banner || !lista) return;
+
+            const pendientes = (historialRecepciones || []).filter(r => r.estado_flujo === "VALIDADO_DESCARGUE");
+            if (pendientes.length === 0 || ES_PERSONAL_DESCARGUE) {
+                banner.style.display = "none";
+                return;
+            }
+
+            banner.style.display = "block";
+            if (badge) badge.textContent = `${pendientes.length} por calificar`;
+
+            lista.innerHTML = pendientes.map(r => `
+                <div style="background: rgba(30, 41, 59, 0.95); border: 1.5px solid #38BDF8; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 270px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 800; color: #FFFFFF;">
+                            🌿 ${r.producto_maestro || 'PRODUCTO'}
+                            ${r.numero_factura ? `<span style="color: #38BDF8; font-size: 12px; font-weight: 600;">(Fac ${r.numero_factura})</span>` : ''}
+                        </div>
+                        <div style="font-size: 11.5px; color: #CBD5E1; margin-top: 2px;">
+                            ${(r.total_plantas_recibidas || 0).toLocaleString()} pl · ${r.variedades ? r.variedades.length : 0} var(s) · Descargó: <strong>${r.responsable_descargue || r.responsable}</strong>
+                        </div>
+                        ${r.tiene_novedades_descargue ? `<div style="font-size: 11px; color: #FCD34D; font-weight: 700; margin-top: 2px;">⚠️ Novedades de camión registradas</div>` : ''}
+                    </div>
+                    <button type="button" class="btn-action" style="background: #22C55E; color: #052E16; font-size: 12.5px; font-weight: 800; height: 36px; padding: 0 14px; border-radius: 8px; white-space: nowrap; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);"
+                        onclick="cargarRecepcionParaEditar(${r.id}, 4)">
+                        🔍 Calificar →
+                    </button>
+                </div>
+            `).join("");
+        }
+
         // =====================================================================
         // NAVEGACIÓN DE 4 PASOS
         // =====================================================================
@@ -4058,6 +4649,10 @@
         }
 
         function irAPaso(numPaso) {
+            if (ES_PERSONAL_DESCARGUE && numPaso === 4) {
+                mostrarToast("⚠️ El Paso 4 es exclusivo para el Asegurador de Calidad. Guarda y valida tu reporte en el Paso 3.", true);
+                return;
+            }
             if (numPaso > pasoActual && !validarPasoActual(numPaso)) return;
             pasoActual = numPaso;
 
@@ -4319,6 +4914,7 @@
             else historialRecepciones.unshift(rec);
             document.getElementById("badge-total-guias").textContent = historialRecepciones.length;
             poblarSelectoresFiltroReportes();
+            renderizarBannerGuiasPendientesCalidad();
         }
 
         // =====================================================================
@@ -5508,6 +6104,10 @@
 
                 const btnEditar = document.getElementById("btn-modal-editar");
                 btnEditar.onclick = () => cargarRecepcionParaEditar(r.id, 3);
+                const btnWa = document.getElementById("btn-modal-wa");
+                if (btnWa) {
+                    btnWa.onclick = () => abrirFichaWhatsappDesdeHistorial(r.id);
+                }
 
                 let html = `
                     <div style="background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 10px; padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -5557,14 +6157,24 @@
                             colorEstado = "var(--score-1-text)";
                         }
 
-                        const textoDetalle = p.observacion
+                        let textoDetalle = p.observacion
                             ? `<strong style="color:${colorEstado};">${palabraEstado}:</strong> <em>${p.observacion}</em>`
                             : `<strong style="color:${colorEstado};">${palabraEstado}</strong>`;
+
+                        if (p.plantas_afectadas > 0) {
+                            textoDetalle += ` · <span style="color:#D97706; font-weight:800;">${p.plantas_afectadas} pl (${(p.porcentaje_afectacion || 0).toFixed(1)}%)</span>`;
+                        }
+
+                        let fotoThumb = "";
+                        if (p.foto_url) {
+                            fotoThumb = `<div style="margin-top:4px;"><img src="${p.foto_url}" alt="Foto" style="width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #CBD5E1; cursor:pointer;" onclick="abrirFotoGrande('${p.foto_url}')"></div>`;
+                        }
 
                         return `
                             <div style="padding: 6px 8px; border: 1px solid var(--border-hairline); border-radius: 6px; font-size: 12px;">
                                 <span class="badge-status ${cls}" style="margin-right: 4px;">${p.puntaje}/3</span>
                                 <strong>${p.nombre}:</strong> ${textoDetalle}
+                                ${fotoThumb}
                             </div>
                         `;
                     }).join("");
@@ -5834,6 +6444,7 @@
             verificarBannerColaOffline();
             renderizarGraficaYTablaReportes();
             renderizarPanelAdmin();
+            renderizarBannerGuiasPendientesCalidad();
         });
     </script>
 </body>
