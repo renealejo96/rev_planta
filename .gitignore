@@ -1,0 +1,26 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Variables de entorno y credenciales (NUNCA subir a GitHub)
+.env
+.env.local
+.env.production
+
+# Python / Django caché y compilados
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+staticfiles/
+media/
+db.sqlite3
+db.sqlite3-journal
+
+# IDE / Sistema Operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
