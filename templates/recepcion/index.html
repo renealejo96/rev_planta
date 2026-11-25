@@ -1386,7 +1386,7 @@
                                 <div id="panel-preview-guia-manuscrita" style="display: none; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.15);">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                         <span id="estado-ocr-guia" style="font-size: 12px; font-weight: 700; color: #86EFAC;">Facturas cargadas:</span>
-                                        <button type="button" class="btn-remove" onclick="cerrarPreviewGuiaManuscrita()">✕ Limpiar Facturas</button>
+                                        <button type="button" class="btn-remove" onclick="descartarYLimpiarFacturas(true)">✕ Limpiar Facturas</button>
                                     </div>
                                     <div id="galeria-previews-paso1" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
                                     <img id="img-preview-guia-manuscrita" src="" alt="Guía Física" style="display: none;">
@@ -1453,8 +1453,8 @@
                                 <button type="button" id="btn-ver-foto-guia-paso2" class="btn-action" style="display: none; background: #0F172A; color: #38BDF8; height: 38px; font-size: 12px;" onclick="toggleFotoGuiaEnPaso2()">
                                     👁️ Ver / Ocultar Fotos de Facturas
                                 </button>
-                                <button type="button" class="btn-remove" style="height: 38px; padding: 0 12px; font-size: 12px;" onclick="reiniciarFormularioEnBlanco()">
-                                    🗑️ Limpiar Facturas
+                                <button type="button" class="btn-remove" style="height: 38px; padding: 0 12px; font-size: 12px;" onclick="descartarYLimpiarFacturas(true)">
+                                    🗑️ Limpiar / Quitar Facturas
                                 </button>
                             </div>
                         </div>
@@ -5027,15 +5027,27 @@
                 { box: "contenedor-progreso-ocr", barra: "barra-progreso-ocr", txt: "texto-etapa-ocr", pct: "porcentaje-progreso-ocr" },
                 { box: "contenedor-progreso-ocr-paso2", barra: "barra-progreso-ocr-paso2", txt: "texto-etapa-ocr-paso2", pct: "porcentaje-progreso-ocr-paso2" },
             ];
+            const esError = typeof texto === "string" && (texto.startsWith("⚠️") || texto.includes("Error") || texto.includes("falló"));
             ids.forEach(cfg => {
                 const box = document.getElementById(cfg.box);
                 const barra = document.getElementById(cfg.barra);
                 const txt = document.getElementById(cfg.txt);
                 const pct = document.getElementById(cfg.pct);
                 if (box) box.style.display = "block";
-                if (barra) barra.style.width = `${porcentaje}%`;
-                if (txt) txt.textContent = texto;
-                if (pct) pct.textContent = `${porcentaje}%`;
+                if (barra) {
+                    barra.style.width = `${porcentaje}%`;
+                    barra.style.background = esError
+                        ? "linear-gradient(90deg, #EF4444 0%, #DC2626 100%)"
+                        : "linear-gradient(90deg, #38BDF8 0%, #22C55E 100%)";
+                }
+                if (txt) {
+                    txt.textContent = texto;
+                    txt.style.color = esError ? "#FCA5A5" : "#38BDF8";
+                }
+                if (pct) {
+                    pct.textContent = `${porcentaje}%`;
+                    pct.style.color = esError ? "#FCA5A5" : "#4ADE80";
+                }
             });
         }
 
@@ -5082,7 +5094,14 @@
                 }
                 const img = new Image();
                 const url = URL.createObjectURL(file);
+                // Tiempo de seguridad: si un móvil no dispara onload/onerror en 3.5s, no cuelgues la app
+                const timeoutId = setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                    resolve(file);
+                }, 3500);
+
                 img.onload = () => {
+                    clearTimeout(timeoutId);
                     URL.revokeObjectURL(url);
                     const maxDim = 1800; // Nitidez perfecta para texto manuscrito con esfero
                     let w = img.width;
@@ -5104,7 +5123,7 @@
                     canvas.toBlob(
                         (blob) => {
                             if (blob) {
-                                resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+                                resolve(new File([blob], (file.name || "guia").replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
                             } else {
                                 resolve(file);
                             }
@@ -5114,6 +5133,7 @@
                     );
                 };
                 img.onerror = () => {
+                    clearTimeout(timeoutId);
                     URL.revokeObjectURL(url);
                     resolve(file);
                 };
@@ -5141,10 +5161,17 @@
 
             let totalIdentificadasSesion = 0;
             let totalRevisionSesion = 0;
+            let exitososEnEstaTanda = 0;
+            let ultimoMensajeError = "";
 
             for (let i = 0; i < archivos.length; i++) {
                 const rawFile = archivos[i];
-                const file = await optimizarImagenParaEscaneo(rawFile);
+                let file = rawFile;
+                try {
+                    file = await optimizarImagenParaEscaneo(rawFile);
+                } catch (e) {
+                    file = rawFile;
+                }
                 const objUrl = URL.createObjectURL(file);
                 const numOrdenFactura = facturasEscaneadasActuales.length + 1;
                 const etiqProgreso = archivos.length > 1 ? `(Factura ${i + 1} de ${archivos.length})` : `(Factura #${numOrdenFactura})`;
@@ -5174,15 +5201,22 @@
                         body: formData,
                     });
                     clearInterval(timerProgreso);
-                    const data = await resp.json();
+                    let data = null;
+                    try {
+                        data = await resp.json();
+                    } catch (parseErr) {
+                        throw new Error(`El servidor respondió con código ${resp.status}`);
+                    }
 
                     if (!data.ok) {
-                        actualizarBarraProgresoOCR(100, `⚠️ ${data.error}`);
-                        if (estadoTxt) estadoTxt.textContent = `⚠️ ${data.error}`;
-                        mostrarToast(data.error, true);
+                        ultimoMensajeError = data.error || "No se pudo interpretar el contenido de la guía.";
+                        actualizarBarraProgresoOCR(100, `⚠️ ${ultimoMensajeError}`);
+                        if (estadoTxt) estadoTxt.textContent = `⚠️ ${ultimoMensajeError}`;
+                        mostrarToast(ultimoMensajeError, true);
                         continue;
                     }
 
+                    exitososEnEstaTanda++;
                     const extraido = data.datos || {};
                     const numFacLeido = (extraido.numero_factura || "").trim();
                     const fechaFacLeida = (extraido.fecha_factura || "").trim();
@@ -5209,7 +5243,7 @@
                         document.getElementById("input-codigo-guia").value = actuales[0];
                     }
 
-                    // Acumular fecha(s) de factura en el campo Fecha de la Factura (independiente de la fecha de calificación)
+                    // Acumular fecha(s) de factura en el campo Fecha de la Factura
                     const inpFechaFac = document.getElementById("input-fecha-factura");
                     if (fechaFacLeida && inpFechaFac) {
                         const fechasActuales = inpFechaFac.value
@@ -5237,9 +5271,6 @@
                                 contenedores: parseInt(vExt.contenedores, 10) || 0,
                             };
 
-                            // Si la variedad está identificada y ya existe en otra factura cargada:
-                            // - Si es el MISMO número de factura, reemplazamos/actualizamos ese lote (evita duplicados si escanean 2 veces la misma factura).
-                            // - Si es una factura DIFERENTE, sumamos el nuevo lote.
                             const existenteIdx = !reqRev
                                 ? variedadesAgregadas.findIndex(v => !v.requiere_revision && v.variedad === nomV)
                                 : -1;
@@ -5272,13 +5303,21 @@
                     totalRevisionSesion += (extraido.revision_count || 0);
                 } catch (err) {
                     clearInterval(timerProgreso);
-                    actualizarBarraProgresoOCR(100, `⚠️ Error en factura #${numOrdenFactura}: ${err.message || 'Error de lectura'}`);
-                    mostrarToast(`⚠️ Error al procesar imagen #${numOrdenFactura}: ${err.message || 'Error de red'}`, true);
+                    ultimoMensajeError = err.message || "Error de lectura o red.";
+                    actualizarBarraProgresoOCR(100, `⚠️ Error en factura #${numOrdenFactura}: ${ultimoMensajeError}`);
+                    mostrarToast(`⚠️ Error al procesar imagen #${numOrdenFactura}: ${ultimoMensajeError}`, true);
                 }
             }
 
             inputEl.value = "";
             renderizarGaleriasFacturasEscaneadas();
+
+            if (exitososEnEstaTanda === 0 && facturasEscaneadasActuales.length === 0) {
+                // Si ninguna foto fue exitosa, no tapar el error con barra verde de 0 facturas
+                const msgFinal = ultimoMensajeError || "No se pudo leer la guía física. Intenta tomar una foto más enfocada.";
+                actualizarBarraProgresoOCR(100, `⚠️ ${msgFinal}`);
+                return;
+            }
 
             const pmsDetectados = obtenerProductosMaestrosEnFactura();
             productoMaestroActual = pmsDetectados[0] || "";
@@ -5316,30 +5355,71 @@
             guardarBorradorLocal();
             mostrarToast(`✅ Factura sumada (${facturasEscaneadasActuales.length} factura(s) en total).`);
 
-            if (pasoActual === 1 && variedadesAgregadas.length > 0) {
+            if (variedadesAgregadas.length > 0) {
                 setTimeout(() => {
                     irAPaso(2);
-                }, 450);
+                }, 350);
             }
         }
 
-        function cerrarPreviewGuiaManuscrita() {
+        function descartarYLimpiarFacturas(forzarPaso1 = true) {
             facturasEscaneadasActuales = [];
-            renderizarGaleriasFacturasEscaneadas();
-            const panel = document.getElementById("panel-preview-guia-manuscrita");
-            if (panel) panel.style.display = "none";
-            const boxProg = document.getElementById("contenedor-progreso-ocr");
-            if (boxProg) boxProg.style.display = "none";
-            const boxProg2 = document.getElementById("contenedor-progreso-ocr-paso2");
-            if (boxProg2) boxProg2.style.display = "none";
-            const boxRes = document.getElementById("resumen-escaneo-paso2");
-            if (boxRes) boxRes.style.display = "none";
-            const visor2 = document.getElementById("visor-foto-guia-paso2");
-            if (visor2) visor2.style.display = "none";
+            variedadesAgregadas = [];
+            productoMaestroActual = "";
+            const inpPm = document.getElementById("input-producto-maestro");
+            if (inpPm) inpPm.value = "";
+            const inpFac = document.getElementById("input-numero-factura");
+            if (inpFac) inpFac.value = "";
+            const inpFecFac = document.getElementById("input-fecha-factura");
+            if (inpFecFac) inpFecFac.value = "";
             const inp = document.getElementById("input-foto-guia-manuscrita");
             if (inp) inp.value = "";
             const inp2 = document.getElementById("input-foto-guia-adicional-paso2");
             if (inp2) inp2.value = "";
+
+            renderizarGaleriasFacturasEscaneadas();
+            renderizarListaVariedadesAgregadasPaso2();
+
+            const panel = document.getElementById("panel-preview-guia-manuscrita");
+            if (panel) panel.style.display = "none";
+            const boxProg = document.getElementById("contenedor-progreso-ocr");
+            if (boxProg) {
+                boxProg.style.display = "none";
+                const b = document.getElementById("barra-progreso-ocr");
+                if (b) b.style.width = "0%";
+            }
+            const boxProg2 = document.getElementById("contenedor-progreso-ocr-paso2");
+            if (boxProg2) {
+                boxProg2.style.display = "none";
+                const b2 = document.getElementById("barra-progreso-ocr-paso2");
+                if (b2) b2.style.width = "0%";
+            }
+            const boxRes = document.getElementById("resumen-escaneo-paso2");
+            if (boxRes) boxRes.style.display = "none";
+            const visor2 = document.getElementById("visor-foto-guia-paso2");
+            if (visor2) visor2.style.display = "none";
+
+            localStorage.removeItem(STORAGE_DRAFT_KEY);
+
+            if (forzarPaso1) {
+                pasoActual = 1;
+                for (let i = 1; i <= 4; i++) {
+                    const p = document.getElementById(`step-panel-${i}`);
+                    if (p) p.classList.toggle("active", i === 1);
+                    const pill = document.getElementById(`pill-step-${i}`);
+                    if (pill) {
+                        pill.classList.remove("active", "completed");
+                        if (i === 1) pill.classList.add("active");
+                    }
+                }
+                actualizarBotonesBarraInferior();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+            mostrarToast("🗑️ Factura(s) descartada(s). Listo para cargar la nueva.");
+        }
+
+        function cerrarPreviewGuiaManuscrita() {
+            descartarYLimpiarFacturas(true);
         }
 
         async function subirFotosEvidenciaPaso3(inputEl) {

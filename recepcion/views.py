@@ -1096,12 +1096,9 @@ def api_escanear_guia_manuscrita(request):
 
         modelos_vision = [
             "gemini-3.5-flash-lite",
-            "gemini-3.5-flash",
             "gemini-flash-lite-latest",
-            "gemini-3.6-flash",
-            "gemini-3.8-flash",
-            "gemini-3.7-flash",
-            "gemini-flash-latest",
+            "gemini-3.1-flash-lite",
+            "gemini-3.5-flash",
         ]
         resp_data = None
         ultimo_error = None
@@ -1109,17 +1106,20 @@ def api_escanear_guia_manuscrita(request):
         for modelo in modelos_vision:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={gemini_key}"
             try:
+                print(f"[OCR] Analizando guía con {modelo}...")
                 req = urllib.request.Request(
                     url,
                     data=json.dumps(body).encode("utf-8"),
                     headers={"Content-Type": "application/json"},
                     method="POST",
                 )
-                with urllib.request.urlopen(req, timeout=14) as resp:
+                with urllib.request.urlopen(req, timeout=10) as resp:
                     resp_data = json.loads(resp.read().decode("utf-8"))
                     if resp_data.get("candidates"):
+                        print(f"[OCR] ✓ Éxito con {modelo}")
                         break
             except Exception as err_m:
+                print(f"[OCR] ⚠️ {modelo} falló: {err_m}")
                 ultimo_error = err_m
                 continue
 
