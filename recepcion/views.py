@@ -299,6 +299,42 @@ def api_guardar_recepcion(request):
     with transaction.atomic():
         total_grupos = len(grupos_por_pm)
         for idx_pm, (pm_actual, lista_items_pm) in enumerate(grupos_por_pm.items()):
+            # Evaluar si ESTE Producto Maestro específico tiene diferencias físicas en plantas o gavetas/bandejas
+            dif_pl_pm = False
+            dif_cont_pm = False
+            for it in lista_items_pm:
+                lotes_it = it.get("lotes") or []
+                if lotes_it:
+                    pl_rec_it = sum(int(l.get("plantas") or 0) for l in lotes_it)
+                    cont_rec_it = sum(int(l.get("contenedores") or 0) for l in lotes_it)
+                else:
+                    pl_rec_it = int(it.get("plantas_recibidas") or it.get("plantas") or 0)
+                    cont_rec_it = int(it.get("contenedores_recibidos") or it.get("contenedores") or 0)
+                pl_fac_it = int(it.get("plantas_factura") or pl_rec_it)
+                cont_fac_it = int(it.get("contenedores_factura") or cont_rec_it)
+                if pl_rec_it != pl_fac_it:
+                    dif_pl_pm = True
+                if cont_rec_it != cont_fac_it:
+                    dif_cont_pm = True
+
+            tiene_discrepancia_pm = dif_pl_pm or dif_cont_pm
+            variedades_nombres_pm = [it.get("variedad", "").lower() for it in lista_items_pm if it.get("variedad")]
+            obs_lower = observaciones_descargue.lower() if observaciones_descargue else ""
+            obs_menciona_pm = (pm_actual.lower() in obs_lower) or any(v_nom in obs_lower for v_nom in variedades_nombres_pm if len(v_nom) > 3)
+
+            # Si hay múltiples productos, solo marcar novedad si este PM tiene discrepancias físicas
+            # o si las observaciones de descargue lo mencionan expresamente (o si es el único producto de la guía)
+            if total_grupos == 1:
+                nov_descargue_pm = tiene_novedades_descargue or tiene_discrepancia_pm
+                obs_descargue_pm = observaciones_descargue
+            else:
+                if tiene_discrepancia_pm or obs_menciona_pm:
+                    nov_descargue_pm = True
+                    obs_descargue_pm = observaciones_descargue
+                else:
+                    nov_descargue_pm = False
+                    obs_descargue_pm = ""
+
             guia = None
             id_existente = nuevos_ids_por_pm.get(pm_actual) or (recepcion_id if total_grupos == 1 else None)
             if id_existente:
@@ -316,8 +352,8 @@ def api_guardar_recepcion(request):
                 guia.observaciones_generales = observaciones_generales
                 if responsable_descargue:
                     guia.responsable_descargue = responsable_descargue
-                guia.tiene_novedades_descargue = tiene_novedades_descargue
-                guia.observaciones_descargue = observaciones_descargue
+                guia.tiene_novedades_descargue = nov_descargue_pm
+                guia.observaciones_descargue = obs_descargue_pm
                 guia.estado_flujo = estado_flujo
                 if request.user.is_authenticated:
                     guia.usuario = request.user
@@ -347,8 +383,8 @@ def api_guardar_recepcion(request):
                     responsable_descargue=responsable_descargue or responsable,
                     producto_maestro=pm_actual,
                     observaciones_generales=observaciones_generales,
-                    tiene_novedades_descargue=tiene_novedades_descargue,
-                    observaciones_descargue=observaciones_descargue,
+                    tiene_novedades_descargue=nov_descargue_pm,
+                    observaciones_descargue=obs_descargue_pm,
                     estado_flujo=estado_flujo,
                 )
 

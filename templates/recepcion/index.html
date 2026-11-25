@@ -941,6 +941,46 @@
             box-shadow: 0 1px 4px rgba(2, 132, 199, 0.35);
         }
 
+        /* Responsive Mobile Cards para Paso 3 (Consolidado de Descargue) */
+        @media (max-width: 768px) {
+            .tabla-desktop-paso3 {
+                display: none !important;
+            }
+            .cards-mobile-paso3 {
+                display: block !important;
+            }
+        }
+        @media (min-width: 769px) {
+            .tabla-desktop-paso3 {
+                display: block !important;
+            }
+            .cards-mobile-paso3 {
+                display: none !important;
+            }
+        }
+
+        .btn-step-count {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid #BAE6FD;
+            background: #FFFFFF;
+            font-size: 18px;
+            font-weight: 800;
+            color: #0284C7;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+        .btn-step-count:active {
+            transform: scale(0.92);
+            background: #E0F2FE;
+        }
+
         .btn-nav-prev {
             height: 46px;
             padding: 0 16px;
@@ -1300,23 +1340,24 @@
         <!-- ===================================================================== -->
         <section id="vista-recepcion" class="view-panel active">
 
-            <!-- Banner de Guías Validadas por Descargue (Visibles para Asegurador de Calidad) -->
+            <!-- Banner de Guías Validadas y Calificadas de la Semana (Visibles para Asegurador de Calidad) -->
             <div id="banner-guias-validadas-descargue" style="display: none; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 1.5px solid #38BDF8; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; color: #FFFFFF; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="background: #0284C7; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 5px; text-transform: uppercase;">
-                                Descargue Validado
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span id="badge-semana-banner" style="background: #0284C7; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 5px; text-transform: uppercase;">
+                                Semana Actual
                             </span>
-                            <span id="badge-conteo-pendientes-calidad" class="tabular" style="font-size: 12px; font-weight: 800; color: #4ADE80;"></span>
+                            <span id="badge-conteo-pendientes-calidad" style="font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;"></span>
                         </div>
-                        <div style="font-size: 15px; font-weight: 800; color: #FFFFFF; margin-top: 4px;">
-                            📦 Guías Listas para Auditoría de Calidad
+                        <div style="font-size: 15.5px; font-weight: 800; color: #FFFFFF; margin-top: 4px;">
+                            📦 Monitoreo de Recepciones Semanales (Descargue y Calidad)
                         </div>
                         <div style="font-size: 12px; color: #CBD5E1; margin-top: 2px;">
-                            El personal de descargue ya validó estas recepciones. Pulsa sobre cualquiera para cargarla directamente a la revisión de planta (Paso 4):
+                            Las recepciones se mantienen aquí durante la semana. Califica los productos pendientes o revisa/modifica los calificados:
                         </div>
                     </div>
+                    <div id="filtros-banner-calidad" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
                 </div>
                 <div id="lista-pills-guias-validadas" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;"></div>
             </div>
@@ -3177,18 +3218,8 @@
                             </div>
                         </div>
 
-                        <div style="overflow-x: auto;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
-                                <thead>
-                                    <tr style="background: #F8FAFC; border-bottom: 1.5px solid #E2E8F0; color: #475569; font-size: 11px; text-transform: uppercase;">
-                                        <th style="padding: 10px 14px; min-width: 220px;">Variedad y Tipo</th>
-                                        <th style="padding: 10px 14px; min-width: 170px;">Declarado en Guía</th>
-                                        <th style="padding: 10px 14px; min-width: 240px; text-align: center;">Conteo Físico Real Furgón</th>
-                                        <th style="padding: 10px 14px; min-width: 170px; text-align: center;">Balance / Novedad</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                `;
+                let filasDesktopHtml = "";
+                let cardsMobileHtml = "";
 
                 listaVar.forEach(v => {
                     const contFac = v.contenedores_factura || v.contenedores_recibidos || 1;
@@ -3206,14 +3237,17 @@
                     const difP = plFis - plFac;
 
                     let badgeDifHtml = `<span class="badge-status badge-muy-bueno" id="badge-dif-var-${v.idxGlobal}">✅ Exacto (${contFis} u. · ${plFis.toLocaleString()} pl)</span>`;
+                    let badgeDifHtmlMob = `<span class="badge-status badge-muy-bueno" id="badge-dif-var-mob-${v.idxGlobal}">✅ Exacto</span>`;
                     if (difC < 0 || difP < 0) {
                         const txtC = difC !== 0 ? `${difC} ${tipoLabelPlural.toLowerCase()}` : '';
                         const txtP = difP !== 0 ? `(${difP.toLocaleString()} pl)` : '';
                         badgeDifHtml = `<span class="badge-status badge-muy-malo" id="badge-dif-var-${v.idxGlobal}">⚠️ Faltante: ${txtC} ${txtP}</span>`;
+                        badgeDifHtmlMob = `<span class="badge-status badge-muy-malo" id="badge-dif-var-mob-${v.idxGlobal}">⚠️ ${txtC || txtP}</span>`;
                     } else if (difC > 0 || difP > 0) {
                         const txtC = difC !== 0 ? `+${difC} ${tipoLabelPlural.toLowerCase()}` : '';
                         const txtP = difP !== 0 ? `(+${difP.toLocaleString()} pl)` : '';
                         badgeDifHtml = `<span class="badge-status badge-regular" id="badge-dif-var-${v.idxGlobal}">ℹ️ Sobrante: ${txtC} ${txtP}</span>`;
+                        badgeDifHtmlMob = `<span class="badge-status badge-regular" id="badge-dif-var-mob-${v.idxGlobal}">ℹ️ ${txtC || txtP}</span>`;
                     }
 
                     let rastreoFacturas = (v.lotes || []).map(l => l.guia_camion || "").filter(Boolean).join(", ");
@@ -3221,7 +3255,8 @@
                         rastreoFacturas = document.getElementById("input-numero-factura")?.value || "Factura principal";
                     }
 
-                    html += `
+                    // 1. Fila para Desktop (> 768px)
+                    filasDesktopHtml += `
                         <tr style="border-bottom: 1px solid #F1F5F9;">
                             <td style="padding: 12px 14px; vertical-align: middle;">
                                 <strong style="color: #0F172A; font-size: 13.5px; display: block;">${v.variedad}</strong>
@@ -3293,11 +3328,114 @@
                             </td>
                         </tr>
                     `;
+
+                    // 2. Tarjetas para Teléfonos Móviles (<= 768px) - 100% Responsive, Sin Scroll Horizontal
+                    cardsMobileHtml += `
+                        <div class="card-mobile-var-paso3" style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                <div style="flex: 1; min-width: 0;">
+                                    <strong style="color: #0F172A; font-size: 14px; display: block; word-break: break-word;">${v.variedad}</strong>
+                                    ${v.texto_leido && v.texto_leido !== v.variedad ? `<div style="font-size: 11px; color: #64748B;">En guía: "${v.texto_leido}"</div>` : ''}
+                                    <div style="font-size: 11px; color: #64748B; margin-top: 2px;">📄 ${rastreoFacturas}</div>
+                                </div>
+                                <div>
+                                    ${badgeDifHtmlMob}
+                                </div>
+                            </div>
+
+                            <!-- Switch Gavetas / Bandejas Mobile -->
+                            <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px;">
+                                <span style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase;">Empaque:</span>
+                                <div style="display: inline-flex; border: 1.5px solid #CBD5E1; border-radius: 7px; overflow: hidden; background: #FFFFFF;">
+                                    <button type="button" class="btn-toggle-tipo ${tCont === 'GAVETA' ? 'active-gaveta' : ''}"
+                                        style="padding: 5px 10px; font-size: 11.5px;"
+                                        onclick="cambiarTipoContenedorPaso3(${v.idxGlobal}, 'GAVETA')">
+                                        🧺 Gavetas
+                                    </button>
+                                    <button type="button" class="btn-toggle-tipo ${tCont === 'BANDEJA' ? 'active-bandeja' : ''}"
+                                        style="padding: 5px 10px; font-size: 11.5px;"
+                                        onclick="cambiarTipoContenedorPaso3(${v.idxGlobal}, 'BANDEJA')">
+                                        📦 Bandejas
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Declarado vs Físico Mobile con Stepper -->
+                            <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <div style="background: #F1F5F9; border-radius: 8px; padding: 8px 10px;">
+                                    <div style="font-size: 9.5px; font-weight: 700; color: #64748B; text-transform: uppercase;">Declarado Factura</div>
+                                    <div class="tabular" style="font-size: 14px; font-weight: 800; color: #1E293B; margin-top: 2px;">
+                                        ${contFac} <span style="font-size: 11px; font-weight: 600; color: #64748B;">${tipoLabelPlural.toLowerCase()}</span>
+                                    </div>
+                                    <div class="tabular" style="font-size: 12px; font-weight: 700; color: #475569; margin-top: 1px;">
+                                        ${plFac.toLocaleString()} <span style="font-size: 10.5px; font-weight: 500; color: #64748B;">pl</span>
+                                    </div>
+                                    <div style="font-size: 10px; color: #0284C7; font-weight: 600; margin-top: 3px;">
+                                        ~${promRedondeado} pl/${tipoLabelSingular}
+                                    </div>
+                                </div>
+
+                                <div style="background: #F0F9FF; border: 1.5px solid #0284C7; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; align-items: center;">
+                                    <div style="font-size: 9.5px; font-weight: 800; color: #0284C7; text-transform: uppercase; margin-bottom: 4px;">Físico Real *</div>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%;">
+                                        <button type="button" class="btn-step-count"
+                                            onclick="ajustarContenedorPaso3Delta(${v.idxGlobal}, -1)">-</button>
+                                        <input type="number" id="input-cont-fis-mob-${v.idxGlobal}" min="0" step="1" inputmode="numeric"
+                                            class="field-input tabular"
+                                            style="width: 58px; height: 36px; padding: 2px; font-weight: 800; font-size: 15px; text-align: center; border: 1.5px solid #0284C7; background: #FFFFFF; border-radius: 6px;"
+                                            value="${contFis}"
+                                            oninput="actualizarContenedoresFisicosPaso3(${v.idxGlobal}, this.value)">
+                                        <button type="button" class="btn-step-count"
+                                            onclick="ajustarContenedorPaso3Delta(${v.idxGlobal}, 1)">+</button>
+                                    </div>
+                                    <div style="font-size: 10px; font-weight: 700; color: #0369A1; margin-top: 3px;">
+                                        ${tipoLabelPlural}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Plantas Físicas Directas Mobile -->
+                            <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px;">
+                                <div>
+                                    <div style="font-size: 10.5px; font-weight: 700; color: #475569;">Plantas Reales Físicas:</div>
+                                    <div id="helper-calc-mob-${v.idxGlobal}" style="font-size: 10px; color: #64748B;">
+                                        ${contFis} × ${promRedondeado} pl/${tipoLabelSingular}
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="input-pl-fis-mob-${v.idxGlobal}" min="0" step="1" inputmode="numeric"
+                                        class="field-input tabular"
+                                        style="width: 88px; height: 34px; padding: 2px 6px; font-weight: 700; font-size: 13.5px; text-align: center; border: 1.5px solid #94A3B8; border-radius: 6px; background: #FFFFFF;"
+                                        value="${plFis}"
+                                        oninput="actualizarPlantasFisicasDirectasPaso3(${v.idxGlobal}, this.value)">
+                                    <span style="font-size: 11px; font-weight: 600; color: #64748B;">pl</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 });
 
                 html += `
+                        <!-- Vista Desktop de Tabla (> 768px) -->
+                        <div class="tabla-desktop-paso3" style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                                <thead>
+                                    <tr style="background: #F8FAFC; border-bottom: 1.5px solid #E2E8F0; color: #475569; font-size: 11px; text-transform: uppercase;">
+                                        <th style="padding: 10px 14px; min-width: 220px;">Variedad y Tipo</th>
+                                        <th style="padding: 10px 14px; min-width: 170px;">Declarado en Guía</th>
+                                        <th style="padding: 10px 14px; min-width: 240px; text-align: center;">Conteo Físico Real Furgón</th>
+                                        <th style="padding: 10px 14px; min-width: 170px; text-align: center;">Balance / Novedad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filasDesktopHtml}
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Vista Móvil de Tarjetas Responsive (<= 768px) -->
+                        <div class="cards-mobile-paso3" style="padding: 10px;">
+                            ${cardsMobileHtml}
                         </div>
                     </div>
                 `;
@@ -3394,6 +3532,14 @@
             renderizarPaso3Consolidado();
         }
 
+        function ajustarContenedorPaso3Delta(idxGlobal, delta) {
+            const v = variedadesAgregadas[idxGlobal];
+            if (!v) return;
+            const actual = parseInt(v.contenedores_recibidos, 10) || 0;
+            const nuevo = Math.max(0, actual + delta);
+            actualizarContenedoresFisicosPaso3(idxGlobal, nuevo);
+        }
+
         function actualizarContenedoresFisicosPaso3(idxGlobal, nuevoValor) {
             const v = variedadesAgregadas[idxGlobal];
             if (!v) return;
@@ -3416,14 +3562,24 @@
                 v.lotes[0].plantas = v.plantas_recibidas;
             }
 
-            const inputPl = document.getElementById(`input-pl-fis-${idxGlobal}`);
-            if (inputPl) inputPl.value = v.plantas_recibidas;
+            // Sincronizar inputs numéricos de Contenedores (Desktop y Mobile)
+            const inputContD = document.getElementById(`input-cont-fis-${idxGlobal}`);
+            if (inputContD && inputContD.value != contFis) inputContD.value = contFis;
+            const inputContM = document.getElementById(`input-cont-fis-mob-${idxGlobal}`);
+            if (inputContM && inputContM.value != contFis) inputContM.value = contFis;
 
+            // Sincronizar inputs de Plantas (Desktop y Mobile)
+            const inputPlD = document.getElementById(`input-pl-fis-${idxGlobal}`);
+            if (inputPlD && inputPlD.value != v.plantas_recibidas) inputPlD.value = v.plantas_recibidas;
+            const inputPlM = document.getElementById(`input-pl-fis-mob-${idxGlobal}`);
+            if (inputPlM && inputPlM.value != v.plantas_recibidas) inputPlM.value = v.plantas_recibidas;
+
+            const tipoSingular = v.tipo_contenedor === "GAVETA" ? "gaveta" : "bandeja";
+            const helperTxt = `Calculado: ${contFis} × ${Math.round(prom)} pl/${tipoSingular}`;
             const helper = document.getElementById(`helper-calc-${idxGlobal}`);
-            if (helper) {
-                const tipoSingular = v.tipo_contenedor === "GAVETA" ? "gaveta" : "bandeja";
-                helper.textContent = `Calculado: ${contFis} × ${Math.round(prom)} pl/${tipoSingular}`;
-            }
+            if (helper) helper.textContent = helperTxt;
+            const helperM = document.getElementById(`helper-calc-mob-${idxGlobal}`);
+            if (helperM) helperM.textContent = helperTxt;
 
             actualizarFilaYBorradorPaso3(idxGlobal);
         }
@@ -3438,18 +3594,27 @@
                 v.lotes[0].plantas = plFis;
             }
 
-            const helper = document.getElementById(`helper-calc-${idxGlobal}`);
-            if (helper) {
-                const contFac = v.contenedores_factura || v.contenedores_recibidos || 1;
-                const plFac = v.plantas_factura || v.plantas_recibidas || 0;
-                if (plFis === plFac && v.contenedores_recibidos === contFac) {
-                    const prom = contFac > 0 ? (plFac / contFac) : 100;
-                    const tipoSingular = v.tipo_contenedor === "GAVETA" ? "gaveta" : "bandeja";
-                    helper.textContent = `Calculado: ${v.contenedores_recibidos} × ${Math.round(prom)} pl/${tipoSingular}`;
-                } else {
-                    helper.textContent = `Ajuste manual directo de plantas`;
-                }
+            // Sincronizar inputs de Plantas (Desktop y Mobile)
+            const inputPlD = document.getElementById(`input-pl-fis-${idxGlobal}`);
+            if (inputPlD && inputPlD.value != plFis) inputPlD.value = plFis;
+            const inputPlM = document.getElementById(`input-pl-fis-mob-${idxGlobal}`);
+            if (inputPlM && inputPlM.value != plFis) inputPlM.value = plFis;
+
+            const contFac = v.contenedores_factura || v.contenedores_recibidos || 1;
+            const plFac = v.plantas_factura || v.plantas_recibidas || 0;
+            let helperTxt = "";
+            if (plFis === plFac && v.contenedores_recibidos === contFac) {
+                const prom = contFac > 0 ? (plFac / contFac) : 100;
+                const tipoSingular = v.tipo_contenedor === "GAVETA" ? "gaveta" : "bandeja";
+                helperTxt = `Calculado: ${v.contenedores_recibidos} × ${Math.round(prom)} pl/${tipoSingular}`;
+            } else {
+                helperTxt = `Ajuste manual directo de plantas`;
             }
+
+            const helper = document.getElementById(`helper-calc-${idxGlobal}`);
+            if (helper) helper.textContent = helperTxt;
+            const helperM = document.getElementById(`helper-calc-mob-${idxGlobal}`);
+            if (helperM) helperM.textContent = helperTxt;
 
             actualizarFilaYBorradorPaso3(idxGlobal);
         }
@@ -3468,22 +3633,33 @@
             const difC = contFis - contFac;
             const difP = plFis - plFac;
 
+            let badgeClass = "badge-status badge-muy-bueno";
+            let badgeHtml = `✅ Exacto (${contFis} u. · ${plFis.toLocaleString()} pl)`;
+            let badgeHtmlMob = `✅ Exacto`;
+
+            if (difC < 0 || difP < 0) {
+                badgeClass = "badge-status badge-muy-malo";
+                const txtC = difC !== 0 ? `${difC} ${tipoLabelPlural.toLowerCase()}` : '';
+                const txtP = difP !== 0 ? `(${difP.toLocaleString()} pl)` : '';
+                badgeHtml = `⚠️ Faltante: ${txtC} ${txtP}`;
+                badgeHtmlMob = `⚠️ ${txtC || txtP}`;
+            } else if (difC > 0 || difP > 0) {
+                badgeClass = "badge-status badge-regular";
+                const txtC = difC !== 0 ? `+${difC} ${tipoLabelPlural.toLowerCase()}` : '';
+                const txtP = difP !== 0 ? `(+${difP.toLocaleString()} pl)` : '';
+                badgeHtml = `ℹ️ Sobrante: ${txtC} ${txtP}`;
+                badgeHtmlMob = `ℹ️ ${txtC || txtP}`;
+            }
+
             const badge = document.getElementById(`badge-dif-var-${idxGlobal}`);
             if (badge) {
-                if (difC === 0 && difP === 0) {
-                    badge.className = "badge-status badge-muy-bueno";
-                    badge.innerHTML = `✅ Exacto (${contFis} u. · ${plFis.toLocaleString()} pl)`;
-                } else if (difC < 0 || difP < 0) {
-                    badge.className = "badge-status badge-muy-malo";
-                    const txtC = difC !== 0 ? `${difC} ${tipoLabelPlural.toLowerCase()}` : '';
-                    const txtP = difP !== 0 ? `(${difP.toLocaleString()} pl)` : '';
-                    badge.innerHTML = `⚠️ Faltante: ${txtC} ${txtP}`;
-                } else {
-                    badge.className = "badge-status badge-regular";
-                    const txtC = difC !== 0 ? `+${difC} ${tipoLabelPlural.toLowerCase()}` : '';
-                    const txtP = difP !== 0 ? `(+${difP.toLocaleString()} pl)` : '';
-                    badge.innerHTML = `ℹ️ Sobrante: ${txtC} ${txtP}`;
-                }
+                badge.className = badgeClass;
+                badge.innerHTML = badgeHtml;
+            }
+            const badgeMob = document.getElementById(`badge-dif-var-mob-${idxGlobal}`);
+            if (badgeMob) {
+                badgeMob.className = badgeClass;
+                badgeMob.innerHTML = badgeHtmlMob;
             }
 
             actualizarKpisYSubtotalesPaso3();
@@ -4568,40 +4744,153 @@
             mostrarToast("🔄 Guía deseleccionada. Elige otra guía validada para calificar.");
         }
 
+        let filtroBannerEstado = 'TODAS';
+
+        function cambiarFiltroBannerEstado(nuevoFiltro) {
+            filtroBannerEstado = nuevoFiltro;
+            renderizarBannerGuiasPendientesCalidad();
+        }
+
         function renderizarBannerGuiasPendientesCalidad() {
             const banner = document.getElementById("banner-guias-validadas-descargue");
             const lista = document.getElementById("lista-pills-guias-validadas");
             const badge = document.getElementById("badge-conteo-pendientes-calidad");
+            const badgeSemana = document.getElementById("badge-semana-banner");
+            const filtrosCont = document.getElementById("filtros-banner-calidad");
             if (!banner || !lista) return;
 
-            const pendientes = (historialRecepciones || []).filter(r => r.estado_flujo === "VALIDADO_DESCARGUE");
-            if (pendientes.length === 0 || ES_PERSONAL_DESCARGUE) {
+            if (ES_PERSONAL_DESCARGUE) {
+                banner.style.display = "none";
+                return;
+            }
+
+            const fechaVal = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
+            const semActual = String(document.getElementById("lbl-semana-calculada")?.textContent || calcularSemanaYYWW(fechaVal) || "{{ semana_actual }}").trim();
+            if (badgeSemana) badgeSemana.textContent = `Semana ${semActual}`;
+
+            // Filtrar recepciones de la semana actual (o las más recientes si no hay de esta semana)
+            let recepcionesSemana = (historialRecepciones || []).filter(r => {
+                const semR = String(r.semana || "").trim();
+                const coincideSem = !semR || !semActual || semR === semActual;
+                const esValido = r.estado_flujo === "VALIDADO_DESCARGUE" || r.estado_flujo === "COMPLETADA";
+                return coincideSem && esValido;
+            });
+
+            if (recepcionesSemana.length === 0) {
+                recepcionesSemana = (historialRecepciones || []).filter(r => {
+                    return r.estado_flujo === "VALIDADO_DESCARGUE" || r.estado_flujo === "COMPLETADA";
+                }).slice(0, 15);
+            }
+
+            if (recepcionesSemana.length === 0) {
                 banner.style.display = "none";
                 return;
             }
 
             banner.style.display = "block";
-            if (badge) badge.textContent = `${pendientes.length} por calificar`;
 
-            lista.innerHTML = pendientes.map(r => {
+            const pendientes = recepcionesSemana.filter(r => r.estado_flujo === "VALIDADO_DESCARGUE");
+            const calificadas = recepcionesSemana.filter(r => r.estado_flujo === "COMPLETADA");
+
+            if (badge) {
+                badge.innerHTML = `
+                    <span style="background: #0284C7; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 5px;">
+                        ⏳ ${pendientes.length} pendiente${pendientes.length !== 1 ? 's' : ''}
+                    </span>
+                    <span style="background: #065F46; color: #34D399; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 5px; border: 1px solid #059669; margin-left: 5px;">
+                        ✅ ${calificadas.length} calificada${calificadas.length !== 1 ? 's' : ''}
+                    </span>
+                `;
+            }
+
+            if (filtrosCont) {
+                filtrosCont.innerHTML = `
+                    <button type="button" onclick="cambiarFiltroBannerEstado('TODAS')"
+                        style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; border: 1px solid ${filtroBannerEstado === 'TODAS' ? '#38BDF8' : '#475569'}; background: ${filtroBannerEstado === 'TODAS' ? '#0284C7' : '#1E293B'}; color: #FFFFFF; cursor: pointer;">
+                        Todas (${recepcionesSemana.length})
+                    </button>
+                    <button type="button" onclick="cambiarFiltroBannerEstado('PENDIENTES')"
+                        style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; border: 1px solid ${filtroBannerEstado === 'PENDIENTES' ? '#38BDF8' : '#475569'}; background: ${filtroBannerEstado === 'PENDIENTES' ? '#0284C7' : '#1E293B'}; color: #FFFFFF; cursor: pointer;">
+                        ⏳ Pendientes (${pendientes.length})
+                    </button>
+                    <button type="button" onclick="cambiarFiltroBannerEstado('CALIFICADAS')"
+                        style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; border: 1px solid ${filtroBannerEstado === 'CALIFICADAS' ? '#10B981' : '#475569'}; background: ${filtroBannerEstado === 'CALIFICADAS' ? '#065F46' : '#1E293B'}; color: #FFFFFF; cursor: pointer;">
+                        ✅ Calificadas (${calificadas.length})
+                    </button>
+                    ${recepcionIdActual ? `
+                        <button type="button" onclick="deseleccionarGuiaParaAuditar()"
+                            style="height: 28px; padding: 0 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #EF4444; background: #7F1D1D; color: #FCA5A5; cursor: pointer;"
+                            title="Deseleccionar la recepción actual">
+                            ✕ Deseleccionar
+                        </button>
+                    ` : ''}
+                `;
+            }
+
+            // Aplicar filtro seleccionado
+            let itemsParaMostrar = recepcionesSemana;
+            if (filtroBannerEstado === 'PENDIENTES') itemsParaMostrar = pendientes;
+            else if (filtroBannerEstado === 'CALIFICADAS') itemsParaMostrar = calificadas;
+
+            // Ordenar: primero la activa (si hay), luego pendientes, luego calificadas
+            itemsParaMostrar.sort((a, b) => {
+                if (a.id === recepcionIdActual) return -1;
+                if (b.id === recepcionIdActual) return 1;
+                if (a.estado_flujo === "VALIDADO_DESCARGUE" && b.estado_flujo !== "VALIDADO_DESCARGUE") return -1;
+                if (b.estado_flujo === "VALIDADO_DESCARGUE" && a.estado_flujo !== "VALIDADO_DESCARGUE") return 1;
+                return b.id - a.id;
+            });
+
+            if (itemsParaMostrar.length === 0) {
+                lista.innerHTML = `
+                    <div style="padding: 16px; text-align: center; color: #94A3B8; font-size: 12.5px; width: 100%;">
+                        No hay recepciones en este filtro (${filtroBannerEstado.toLowerCase()}).
+                    </div>
+                `;
+                return;
+            }
+
+            lista.innerHTML = itemsParaMostrar.map(r => {
                 const esActiva = recepcionIdActual === r.id;
+                const esCalificada = r.estado_flujo === "COMPLETADA";
+                const pct = typeof r.porcentaje_calidad_maestro === "number" ? r.porcentaje_calidad_maestro.toFixed(1) : "100.0";
+
+                let borderCol = esActiva ? '#34D399' : (esCalificada ? '#059669' : (r.tiene_novedades_descargue ? '#F59E0B' : '#38BDF8'));
+                let bgCol = esActiva
+                    ? (esCalificada ? '#064E3B' : '#0F2F4A')
+                    : (esCalificada ? 'rgba(15, 35, 27, 0.95)' : 'rgba(30, 41, 59, 0.95)');
+
                 return `
-                    <div style="background: ${esActiva ? '#064E3B' : 'rgba(30, 41, 59, 0.95)'}; border: 2px solid ${esActiva ? '#34D399' : '#38BDF8'}; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 270px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                        <div>
-                            <div style="font-size: 14px; font-weight: 800; color: #FFFFFF;">
-                                🌿 ${r.producto_maestro || 'PRODUCTO'}
-                                ${r.numero_factura ? `<span style="color: #38BDF8; font-size: 12px; font-weight: 600;">(Fac ${r.numero_factura})</span>` : ''}
-                                ${esActiva ? `<span style="background: #10B981; color: #064E3B; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">👉 EN REVISIÓN</span>` : ''}
+                    <div style="background: ${bgCol}; border: 2px solid ${borderCol}; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 270px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <span style="font-size: 14px; font-weight: 800; color: #FFFFFF;">
+                                    🌿 ${r.producto_maestro || 'PRODUCTO'}
+                                </span>
+                                ${esCalificada ? `
+                                    <span style="background: #10B981; color: #064E3B; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">
+                                        ✅ CALIFICADO · ${pct}%
+                                    </span>
+                                ` : `
+                                    <span style="background: #0284C7; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">
+                                        ⏳ POR CALIFICAR
+                                    </span>
+                                `}
+                                ${r.numero_factura ? `<span style="color: ${esCalificada ? '#6EE7B7' : '#38BDF8'}; font-size: 11.5px; font-weight: 600;">(Fac ${r.numero_factura})</span>` : ''}
+                                ${esActiva ? `<span style="background: #34D399; color: #064E3B; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">👉 EN REVISIÓN</span>` : ''}
                             </div>
-                            <div style="font-size: 11.5px; color: #CBD5E1; margin-top: 2px;">
-                                ${(r.total_plantas_recibidas || 0).toLocaleString()} pl · ${r.variedades ? r.variedades.length : 0} var(s) · Descargó: <strong>${r.responsable_descargue || r.responsable}</strong>
+                            <div style="font-size: 11.5px; color: #CBD5E1; margin-top: 3px;">
+                                ${(r.total_plantas_recibidas || 0).toLocaleString()} pl · ${r.variedades ? r.variedades.length : 0} var(s) · ${esCalificada ? `Auditor: <strong>${r.responsable}</strong>` : `Descargó: <strong>${r.responsable_descargue || r.responsable}</strong>`}
                             </div>
                             ${r.tiene_novedades_descargue ? `<div style="font-size: 11px; color: #FCD34D; font-weight: 700; margin-top: 2px;">⚠️ Novedades de camión registradas</div>` : ''}
                         </div>
-                        <button type="button" class="btn-action" style="background: ${esActiva ? '#10B981' : '#22C55E'}; color: #052E16; font-size: 12.5px; font-weight: 800; height: 36px; padding: 0 14px; border-radius: 8px; white-space: nowrap; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);"
-                            onclick="cargarRecepcionParaEditar(${r.id}, 4)">
-                            ${esActiva ? '✓ Seleccionada' : '🔍 Calificar →'}
-                        </button>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <button type="button" class="btn-action"
+                                style="background: ${esActiva ? '#34D399' : (esCalificada ? '#1E293B' : '#22C55E')}; color: ${esActiva ? '#064E3B' : (esCalificada ? '#6EE7B7' : '#052E16')}; border: ${esCalificada ? '1.5px solid #059669' : 'none'}; font-size: 12px; font-weight: 800; height: 36px; padding: 0 13px; border-radius: 8px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.25);"
+                                onclick="cargarRecepcionParaEditar(${r.id}, 4)">
+                                ${esActiva ? '✓ Seleccionada' : (esCalificada ? '👁️ Ver / Modificar' : '🔍 Calificar →')}
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join("");

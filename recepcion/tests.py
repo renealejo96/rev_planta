@@ -156,3 +156,57 @@ class RecepcionPlantaTests(TestCase):
         maestro_dict, _ = cargar_maestro_pros()
         self.assertIn("DELPHINIUM", maestro_dict)
         self.assertIn("GUARDIAN BLUE", maestro_dict["DELPHINIUM"])
+
+    def test_aislamiento_novedades_descargue_por_producto_maestro(self):
+        juan = User.objects.get(username="juan")
+        self.client.force_login(juan)
+
+        # Factura con 2 productos: SOLIDAGO (con discrepancia de gavetas) y VERONICA (exacto)
+        payload = {
+            "estado_flujo": "VALIDADO_DESCARGUE",
+            "fecha_recepcion": "2026-11-25",
+            "numero_factura": "FAC-TEST-001",
+            "tiene_novedades_descargue": True,
+            "observaciones_descargue": "NOVEDADES DETECTADAS EN DESCARGUE FÍSICO:\n• GOLDEN GLORY YELLOW: Sobrante de +4 gavetas.",
+            "variedades": [
+                {
+                    "variedad": "GOLDEN GLORY YELLOW",
+                    "producto_maestro": "SOLIDAGO",
+                    "tipo_contenedor": "GAVETA",
+                    "plantas_factura": 24120,
+                    "contenedores_factura": 134,
+                    "plantas_recibidas": 24840,
+                    "contenedores_recibidos": 138,
+                    "lotes": [],
+                },
+                {
+                    "variedad": "SKYLER SPLASH PINK",
+                    "producto_maestro": "VERONICA",
+                    "tipo_contenedor": "BANDEJA",
+                    "plantas_factura": 3000,
+                    "contenedores_factura": 15,
+                    "plantas_recibidas": 3000,
+                    "contenedores_recibidos": 15,
+                    "lotes": [],
+                },
+            ],
+        }
+
+        resp = self.client.post(
+            reverse("recepcion:api_guardar_recepcion"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["ok"])
+
+        # Verificar en base de datos que solo SOLIDAGO tiene novedad y VERONICA está limpio
+        guia_sol = RecepcionGuia.objects.get(producto_maestro="SOLIDAGO", numero_factura="FAC-TEST-001")
+        guia_ver = RecepcionGuia.objects.get(producto_maestro="VERONICA", numero_factura="FAC-TEST-001")
+
+        self.assertTrue(guia_sol.tiene_novedades_descargue)
+        self.assertIn("GOLDEN GLORY YELLOW", guia_sol.observaciones_descargue)
+
+        self.assertFalse(guia_ver.tiene_novedades_descargue)
+        self.assertEqual(guia_ver.observaciones_descargue, "")
