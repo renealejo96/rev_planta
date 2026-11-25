@@ -1097,7 +1097,6 @@ def api_escanear_guia_manuscrita(request):
         modelos_vision = [
             "gemini-flash-lite-latest",
             "gemini-3.5-flash-lite",
-            "gemini-3-flash-preview",
         ]
         resp_data = None
         ultimo_error = None
@@ -1113,10 +1112,10 @@ def api_escanear_guia_manuscrita(request):
                         headers={"Content-Type": "application/json"},
                         method="POST",
                     )
-                    with urllib.request.urlopen(req, timeout=9) as resp:
+                    with urllib.request.urlopen(req, timeout=8) as resp:
                         resp_data = json.loads(resp.read().decode("utf-8"))
                         if resp_data.get("candidates"):
-                            print(f"[OCR] ✓ Éxito con {modelo}")
+                            print(f"[OCR] ✓ Éxito con {modelo} (intento {intento + 1})")
                             break
                 except Exception as err_m:
                     print(f"[OCR] ⚠️ {modelo} falló: {err_m}")
@@ -1126,7 +1125,7 @@ def api_escanear_guia_manuscrita(request):
                 break
             if intento == 0:
                 import time
-                time.sleep(1.2)
+                time.sleep(2.0)
 
         if not resp_data or not resp_data.get("candidates"):
             raise RuntimeError(f"{ultimo_error or 'Servicio de visión temporalmente ocupado'}")
