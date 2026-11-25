@@ -3901,13 +3901,16 @@
         async function avanzarACalificacionCalidad() {
             await validarDescargueYEnviar(false);
             const pms = obtenerProductosMaestrosEnFactura();
-            filtroPMPaso4 = pms[0] || "TODOS";
-            filtroPMPaso3 = filtroPMPaso4;
-            const indices = obtenerIndicesVariedadesFiltradasPaso3();
-            indiceVariedadPaso4 = indices.length > 0 ? indices[0] : 0;
-            indiceVariedadPaso3 = indiceVariedadPaso4;
-            irAPaso(4);
-            mostrarToast("🌿 Descargue listo. Iniciando revisión de calidad (Muestreo 10%).");
+            const primerPM = pms[0] || productoMaestroActual || "";
+            const targetId = recepcionIdsPorPM[primerPM] || recepcionIdActual;
+
+            cambiarVista("calidad");
+            if (targetId) {
+                await cargarRecepcionParaEditar(targetId, 4);
+            } else {
+                irAPaso(4);
+            }
+            mostrarToast(`🌿 Descargue validado. Iniciando revisión de calidad: ${primerPM || 'Calidad'}.`);
         }
 
         // =====================================================================
@@ -5414,14 +5417,18 @@
             pasoActual = numPaso;
 
             const p1 = document.getElementById("step-panel-1");
-            if (p1) p1.style.display = "block";
-
             const p2 = document.getElementById("step-panel-2");
             const p3 = document.getElementById("step-panel-3");
+            const p4 = document.getElementById("step-panel-4");
             const btnSubConteo = document.getElementById("btn-subtab-descargue-conteo");
             const btnSubVars = document.getElementById("btn-subtab-descargue-vars");
 
-            if (numPaso === 2) {
+            if (numPaso === 1) {
+                cambiarVista("facturas");
+                if (p1) p1.style.display = "block";
+                renderizarListaFacturasCargadas();
+            } else if (numPaso === 2) {
+                cambiarVista("descargue");
                 if (p2) p2.style.display = "block";
                 if (p3) p3.style.display = "none";
                 if (btnSubVars) { btnSubVars.style.background = "#112218"; btnSubVars.style.color = "#FFFFFF"; }
@@ -5429,14 +5436,16 @@
                 actualizarSlicerVariedadesPaso2();
                 renderizarListaVariedadesAgregadasPaso2();
             } else if (numPaso === 3) {
+                cambiarVista("descargue");
                 if (p3) p3.style.display = "block";
                 if (p2) p2.style.display = "none";
                 if (btnSubConteo) { btnSubConteo.style.background = "#112218"; btnSubConteo.style.color = "#FFFFFF"; }
                 if (btnSubVars) { btnSubVars.style.background = "#F1F5F9"; btnSubVars.style.color = "#334155"; }
                 renderizarPaso3Consolidado();
             } else if (numPaso === 4) {
-                const p4 = document.getElementById("step-panel-4");
+                cambiarVista("calidad");
                 if (p4) p4.style.display = "block";
+                renderizarBannerGuiasPendientesCalidad();
                 renderizarPaso4Calificacion();
             }
 
