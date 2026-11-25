@@ -1095,33 +1095,38 @@ def api_escanear_guia_manuscrita(request):
         }
 
         modelos_vision = [
-            "gemini-3.5-flash-lite",
             "gemini-flash-lite-latest",
-            "gemini-3.1-flash-lite",
-            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3-flash-preview",
         ]
         resp_data = None
         ultimo_error = None
 
-        for modelo in modelos_vision:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={gemini_key}"
-            try:
-                print(f"[OCR] Analizando guía con {modelo}...")
-                req = urllib.request.Request(
-                    url,
-                    data=json.dumps(body).encode("utf-8"),
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    resp_data = json.loads(resp.read().decode("utf-8"))
-                    if resp_data.get("candidates"):
-                        print(f"[OCR] ✓ Éxito con {modelo}")
-                        break
-            except Exception as err_m:
-                print(f"[OCR] ⚠️ {modelo} falló: {err_m}")
-                ultimo_error = err_m
-                continue
+        for intento in range(2):
+            for modelo in modelos_vision:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={gemini_key}"
+                try:
+                    print(f"[OCR] Analizando guía con {modelo} (intento {intento + 1})...")
+                    req = urllib.request.Request(
+                        url,
+                        data=json.dumps(body).encode("utf-8"),
+                        headers={"Content-Type": "application/json"},
+                        method="POST",
+                    )
+                    with urllib.request.urlopen(req, timeout=9) as resp:
+                        resp_data = json.loads(resp.read().decode("utf-8"))
+                        if resp_data.get("candidates"):
+                            print(f"[OCR] ✓ Éxito con {modelo}")
+                            break
+                except Exception as err_m:
+                    print(f"[OCR] ⚠️ {modelo} falló: {err_m}")
+                    ultimo_error = err_m
+                    continue
+            if resp_data and resp_data.get("candidates"):
+                break
+            if intento == 0:
+                import time
+                time.sleep(1.2)
 
         if not resp_data or not resp_data.get("candidates"):
             raise RuntimeError(f"{ultimo_error or 'Servicio de visión temporalmente ocupado'}")
@@ -1355,11 +1360,32 @@ def api_escanear_guia_manuscrita(request):
             }
         )
     except Exception as e:
+        err_str = str(e)
+        if "503" in err_str or "UNAVAILABLE" in err_str or "demand" in err_str.lower():
+            mensaje_amigable = (
+                "Google Gemini está experimentando alta demanda momentánea en sus servidores (Error 503). "
+                "Espera 5 segundos y vuelve a pulsar el botón para escanear."
+            )
+        elif "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+            mensaje_amigable = (
+                "Límite de consultas por minuto alcanzado temporalmente en Google Gemini (Error 429). "
+                "Espera unos segundos y reintenta."
+            )
+        elif "timed out" in err_str.lower() or "timeout" in err_str.lower():
+            mensaje_amigable = (
+                "Tiempo de espera agotado al conectar con Google Gemini. "
+                "Verifica tu conexión y vuelve a pulsar para reintentar."
+            )
+        else:
+            mensaje_amigable = f"No se pudo extraer el texto de la guía física: {err_str}"
+
+        print(f"[OCR ERROR] {mensaje_amigable} (Detalle original: {e})")
         return JsonResponse(
             {
                 "ok": False,
-                "error": f"No se pudo procesar automáticamente la imagen ({e}). Puedes transcribir viendo la foto en pantalla.",
-            }
+                "error": mensaje_amigable,
+            },
+            status=500,
         )
 
 

@@ -5103,7 +5103,7 @@
                 img.onload = () => {
                     clearTimeout(timeoutId);
                     URL.revokeObjectURL(url);
-                    const maxDim = 1800; // Nitidez perfecta para texto manuscrito con esfero
+                    const maxDim = 1500; // Nitidez perfecta y peso liviano (~400KB) para transmisión ultra rápida a Gemini
                     let w = img.width;
                     let h = img.height;
                     if (w > maxDim || h > maxDim) {
@@ -5129,7 +5129,7 @@
                             }
                         },
                         "image/jpeg",
-                        0.88
+                        0.80
                     );
                 };
                 img.onerror = () => {
