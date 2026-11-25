@@ -1577,6 +1577,26 @@
                     </div>
                     <div id="filtros-banner-calidad" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
                 </div>
+
+                <!-- FILTRO PADRE POR FACTURA EN CALIDAD (EVITA SATURACIÓN EN TELÉFONOS) -->
+                <div id="box-filtro-padre-facturas-calidad" style="margin-top: 12px; padding: 10px 12px; background: rgba(15, 23, 42, 0.75); border: 1.5px solid #334155; border-radius: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+                        <span style="font-size: 12px; font-weight: 800; color: #38BDF8; display: inline-flex; align-items: center; gap: 6px;">
+                            📄 Factura a Inspeccionar (Filtro Padre):
+                        </span>
+                        <span id="badge-conteo-factura-activa-calidad" style="font-size: 11.5px; color: #CBD5E1; font-weight: 700;"></span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 170px;">
+                            <select id="sel-factura-calidad" onchange="cambiarFiltroFacturaCalidad(this.value)"
+                                style="height: 36px; font-size: 12.5px; font-weight: 700; background: #1E293B; color: #FFFFFF; border: 1.5px solid #0284C7; border-radius: 8px; padding: 0 10px; width: 100%;">
+                                <option value="TODAS">📄 Todas las Facturas de la Semana</option>
+                            </select>
+                        </div>
+                        <div id="pills-rapidos-facturas-calidad" style="display: flex; gap: 6px; overflow-x: auto; max-width: 100%; padding-bottom: 2px;"></div>
+                    </div>
+                </div>
+
                 <div id="lista-pills-guias-validadas" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;"></div>
             </div>
 
@@ -2861,13 +2881,13 @@
 
             guardarBorradorLocal();
 
-            // Guardar progreso en el backend con estado VALIDADO_DESCARGUE para no perder las calificaciones
+            // Guardar progreso en el backend con estado COMPLETADA (Guía calificada individualmente)
             try {
                 const payload = {
                     recepcion_id: recepcionIdActual,
                     recepcion_ids_por_pm: recepcionIdsPorPM,
                     preservar_variedades_previas: preservarVariedadesPreviasEnGuardado,
-                    estado_flujo: "VALIDADO_DESCARGUE",
+                    estado_flujo: "COMPLETADA",
                     fecha_recepcion: document.getElementById("input-fecha").value,
                     responsable: document.getElementById("input-responsable").value,
                     responsable_descargue: responsableDescargue || RESPONSABLE_SESION,
@@ -2897,17 +2917,20 @@
                     (data.recepciones || [data.recepcion]).forEach(r => actualizarOInsertarEnHistorialLocal(r));
                 }
             } catch (e) {
-                console.warn("Autoguardado de avance de calificación:", e);
+                console.warn("Guardado de calificación individual:", e);
             }
 
-            const pmsPendientes = obtenerPMsPendientesDeCalificar();
-            if (pmsPendientes.length > 0) {
-                mostrarToast(`✅ Calificación de ${pm} validada y guardada. Pasa a calificar ${pmsPendientes[0]}.`);
-                filtroPMPaso3 = pmsPendientes[0];
-                const indices = obtenerIndicesVariedadesFiltradasPaso3();
-                indiceVariedadPaso3 = indices.length > 0 ? indices[0] : 0;
+            const numFacActual = (document.getElementById("input-numero-factura")?.value || "").trim();
+            const prodsFac = (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === numFacActual);
+            const pendientesFac = prodsFac.filter(r => r.estado_flujo === "VALIDADO_DESCARGUE" && r.id !== recepcionIdActual);
+
+            renderizarBannerGuiasPendientesCalidad();
+            actualizarBadgesNavegacion();
+
+            if (pendientesFac.length > 0) {
+                mostrarToast(`✅ Calificación de ${pm} guardada con éxito. Quedan ${pendientesFac.length} producto(s) pendientes.`);
             } else {
-                mostrarToast(`🎉 ¡Excelente! Todos los productos maestros han sido calificados.`);
+                mostrarToast(`🎉 ¡Todas las recepciones de la Factura #${numFacActual || 'actual'} han sido calificadas!`);
             }
 
             renderizarPaso4Calificacion();
@@ -3904,6 +3927,11 @@
             const primerPM = pms[0] || productoMaestroActual || "";
             const targetId = recepcionIdsPorPM[primerPM] || recepcionIdActual;
 
+            const numFac = (document.getElementById("input-numero-factura")?.value || "").trim();
+            if (numFac) {
+                filtroFacturaCalidad = numFac;
+            }
+
             cambiarVista("calidad");
             if (targetId) {
                 await cargarRecepcionParaEditar(targetId, 4);
@@ -4211,10 +4239,15 @@
 
             const pmActual = (itemVar && itemVar.producto_maestro) || filtroPMPaso3 || "GENERAL";
             const recActiva = (historialRecepciones || []).find(r => r.id === recepcionIdActual);
-            const estaPMCalificado = productosMaestrosCalificados.has(pmActual);
+            const estaPMCalificado = productosMaestrosCalificados.has(pmActual) || (recActiva && recActiva.estado_flujo === "COMPLETADA");
             const todosLosPMsListos = estanTodosLosPMsCalificados();
             const pms = obtenerProductosMaestrosEnFactura();
             const pmsPendientes = obtenerPMsPendientesDeCalificar();
+
+            const numFacActual = (document.getElementById("input-numero-factura")?.value || recActiva?.numero_factura || recActiva?.codigo_guia || "").trim();
+            const prodsMismaFac = (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === numFacActual);
+            const pendientesMismaFac = prodsMismaFac.filter(r => r.estado_flujo === "VALIDADO_DESCARGUE" && r.id !== recepcionIdActual);
+            const todasCalificadasFac = prodsMismaFac.length > 0 && pendientesMismaFac.length === 0 && estaPMCalificado;
 
             html += `
                 <div style="background: ${estaPMCalificado ? '#F0FDF4' : '#EFF6FF'}; border: 1.5px solid ${estaPMCalificado ? '#86EFAC' : '#93C5FD'}; border-radius: 12px; padding: 14px 18px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -4226,7 +4259,7 @@
                         <div style="font-size: 12px; color: ${estaPMCalificado ? '#166534' : '#1D4ED8'}; margin-top: 3px;">
                             ${estaPMCalificado
                                 ? `Este producto ya está validado. Si realizas cambios en los parámetros, pulsa de nuevo para actualizar.`
-                                : `Revisa los parámetros y muestreo 10% de las variedades de ${pmActual}. Al pulsar guardar, se valida su calificación.`
+                                : `Revisa los parámetros y muestreo 10% de las variedades de ${pmActual}. Al pulsar guardar, se valida su calificación individual.`
                             }
                         </div>
                     </div>
@@ -4252,7 +4285,44 @@
                 </div>
             `;
 
-            if (todosLosPMsListos) {
+            if (todasCalificadasFac) {
+                const idsFacStr = prodsMismaFac.map(x => x.id).join(',');
+                html += `
+                    <div style="background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); border: 2px solid #10B981; border-radius: 14px; padding: 18px 20px; margin-top: 16px; color: #FFFFFF; text-align: center; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);">
+                        <div style="font-size: 30px; margin-bottom: 4px;">🎉</div>
+                        <h3 style="font-size: 18px; font-weight: 800; color: #FFFFFF; margin: 0 0 6px 0;">
+                            ¡Factura #${numFacActual || 'Actual'} Calificada al 100%!
+                        </h3>
+                        <p style="font-size: 13px; color: #D1FAE5; margin: 0 auto 16px auto; max-width: 520px;">
+                            Se evaluaron todos los ${prodsMismaFac.length} productos de esta factura. Ya puedes abrir el collage consolidado para captura de WhatsApp o descargar el Excel.
+                        </p>
+                        <div style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                            <button type="button" class="btn-action" style="background: #25D366; color: #052E16; font-weight: 800; height: 42px; padding: 0 18px; font-size: 13px; border-radius: 9px; box-shadow: 0 3px 10px rgba(37,211,102,0.4);" onclick="abrirFichaResumenWhatsappMulti(obtenerRecepcionesDeFactura('${numFacActual}'))">
+                                📲 Ver Collage para WhatsApp (Factura #${numFacActual})
+                            </button>
+                            <a href="/exportar/excel/?ids=${idsFacStr}" class="btn-action" style="background: #047857; color: #FFFFFF; border: 1.5px solid #34D399; font-weight: 700; height: 42px; padding: 0 18px; font-size: 13px; border-radius: 9px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                                📊 Descargar Excel (.xlsx)
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else if (pendientesMismaFac.length > 0 && estaPMCalificado) {
+                html += `
+                    <div style="background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 12px; padding: 14px 18px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div style="font-size: 13.5px; color: #92400E; font-weight: 800;">
+                                ⏳ Siguiente producto por calificar en Factura #${numFacActual}: <strong>${pendientesMismaFac[0].producto_maestro}</strong>
+                            </div>
+                            <div style="font-size: 11.5px; color: #B45309; margin-top: 2px;">
+                                Quedan <strong>${pendientesMismaFac.length} producto(s)</strong> pendientes de calificar en esta factura (${pendientesMismaFac.map(x => x.producto_maestro).join(", ")}).
+                            </div>
+                        </div>
+                        <button type="button" class="btn-action" style="background: #D97706; color: #FFFFFF; font-weight: 800; height: 38px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35);" onclick="cargarRecepcionParaEditar(${pendientesMismaFac[0].id}, 4)">
+                            🌿 Calificar Siguiente: ${pendientesMismaFac[0].producto_maestro} →
+                        </button>
+                    </div>
+                `;
+            } else if (todosLosPMsListos) {
                 html += `
                     <div style="background: linear-gradient(135deg, #14532D 0%, #166534 100%); color: #FFFFFF; border-radius: 12px; padding: 16px 20px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 14px rgba(22, 101, 52, 0.25);">
                         <div>
@@ -4490,12 +4560,23 @@
         let ultimasRecepcionesFinalizadas = [];
         let recepcionesEnFichaWhatsapp = [];
 
+        function obtenerRecepcionesDeFactura(numFac) {
+            if (!numFac || numFac === "TODAS") {
+                return (historialRecepciones || []).filter(r => r.estado_flujo === "COMPLETADA");
+            }
+            const califs = (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === numFac && r.estado_flujo === "COMPLETADA");
+            return califs.length > 0 ? califs : (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === numFac);
+        }
+
         function abrirFichaResumenWhatsappMulti(recs = null) {
             const fechaVal = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
             const semActual = String(document.getElementById("lbl-semana-calculada")?.textContent || calcularSemanaYYWW(fechaVal) || "{{ semana_actual }}").trim();
 
             if (recs && recs.length > 0) {
                 recepcionesEnFichaWhatsapp = recs;
+            } else if (typeof filtroFacturaCalidad !== "undefined" && filtroFacturaCalidad && filtroFacturaCalidad !== "TODAS") {
+                const recsFac = (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === filtroFacturaCalidad && r.estado_flujo === "COMPLETADA");
+                recepcionesEnFichaWhatsapp = recsFac.length > 0 ? recsFac : (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === filtroFacturaCalidad);
             } else if (ultimasRecepcionesFinalizadas && ultimasRecepcionesFinalizadas.length > 0) {
                 recepcionesEnFichaWhatsapp = ultimasRecepcionesFinalizadas;
             } else {
@@ -5192,9 +5273,28 @@
         }
 
         let filtroBannerEstado = 'TODAS';
+        let filtroFacturaCalidad = 'TODAS';
 
         function cambiarFiltroBannerEstado(nuevoFiltro) {
             filtroBannerEstado = nuevoFiltro;
+            renderizarBannerGuiasPendientesCalidad();
+        }
+
+        function cambiarFiltroFacturaCalidad(nuevaFac) {
+            filtroFacturaCalidad = nuevaFac;
+            if (nuevaFac && nuevaFac !== "TODAS") {
+                const rActual = (historialRecepciones || []).find(r => r.id === recepcionIdActual);
+                const numFacActual = rActual ? (rActual.numero_factura || rActual.codigo_guia || "").trim() : "";
+                if (numFacActual !== nuevaFac) {
+                    const prodsFac = (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === nuevaFac);
+                    const pend = prodsFac.find(r => r.estado_flujo === "VALIDADO_DESCARGUE");
+                    const target = pend || prodsFac[0];
+                    if (target) {
+                        cargarRecepcionParaEditar(target.id, 4);
+                        return;
+                    }
+                }
+            }
             renderizarBannerGuiasPendientesCalidad();
         }
 
@@ -5236,8 +5336,94 @@
 
             banner.style.display = "block";
 
-            const pendientes = recepcionesSemana.filter(r => r.estado_flujo === "VALIDADO_DESCARGUE");
-            const calificadas = recepcionesSemana.filter(r => r.estado_flujo === "COMPLETADA");
+            // Agrupar facturas disponibles en esta semana para el Filtro Padre
+            const facturasSemanaMap = {};
+            recepcionesSemana.forEach(r => {
+                const numFac = (r.numero_factura || r.codigo_guia || "S/N").trim();
+                if (!facturasSemanaMap[numFac]) {
+                    facturasSemanaMap[numFac] = {
+                        numero: numFac,
+                        total: 0,
+                        pendientes: 0,
+                        calificadas: 0,
+                        plantas: 0,
+                        pms: []
+                    };
+                }
+                const fItem = facturasSemanaMap[numFac];
+                fItem.total++;
+                fItem.plantas += (r.total_plantas_recibidas || 0);
+                if (r.producto_maestro && !fItem.pms.includes(r.producto_maestro)) {
+                    fItem.pms.push(r.producto_maestro);
+                }
+                if (r.estado_flujo === "VALIDADO_DESCARGUE") fItem.pendientes++;
+                if (r.estado_flujo === "COMPLETADA") fItem.calificadas++;
+            });
+
+            const listaFacturas = Object.values(facturasSemanaMap);
+
+            // Validar que el filtro actual exista; si no, reiniciar a TODAS o a la primera
+            if (filtroFacturaCalidad !== "TODAS" && !facturasSemanaMap[filtroFacturaCalidad]) {
+                filtroFacturaCalidad = listaFacturas.length > 0 ? listaFacturas[0].numero : "TODAS";
+            }
+
+            // Renderizar selector y botones de pastilla (pills) para Factura Padre
+            const selFac = document.getElementById("sel-factura-calidad");
+            const pillsFac = document.getElementById("pills-rapidos-facturas-calidad");
+            const badgeFacInfo = document.getElementById("badge-conteo-factura-activa-calidad");
+
+            if (selFac) {
+                let optsHtml = `<option value="TODAS" ${filtroFacturaCalidad === "TODAS" ? "selected" : ""}>📄 Todas las Facturas (${recepcionesSemana.length} productos)</option>`;
+                listaFacturas.forEach(f => {
+                    const selAttr = filtroFacturaCalidad === f.numero ? "selected" : "";
+                    const pendTxt = f.pendientes > 0 ? ` · ⏳ ${f.pendientes} pend` : ` · ✅ Calificada`;
+                    optsHtml += `<option value="${f.numero}" ${selAttr}>📄 Factura #${f.numero} (${f.total} prod${pendTxt})</option>`;
+                });
+                selFac.innerHTML = optsHtml;
+            }
+
+            if (pillsFac) {
+                let pillsHtml = `
+                    <button type="button" onclick="cambiarFiltroFacturaCalidad('TODAS')"
+                        style="height: 32px; padding: 0 12px; font-size: 11.5px; font-weight: 700; border-radius: 8px; border: 1.5px solid ${filtroFacturaCalidad === 'TODAS' ? '#38BDF8' : '#475569'}; background: ${filtroFacturaCalidad === 'TODAS' ? '#0284C7' : '#1E293B'}; color: #FFFFFF; white-space: nowrap; cursor: pointer; flex-shrink: 0;">
+                        Todas (${recepcionesSemana.length})
+                    </button>
+                `;
+                listaFacturas.forEach(f => {
+                    const esActiva = filtroFacturaCalidad === f.numero;
+                    const tienePend = f.pendientes > 0;
+                    const borderPill = esActiva ? '#38BDF8' : (tienePend ? '#64748B' : '#059669');
+                    const bgPill = esActiva ? '#0284C7' : (tienePend ? '#1E293B' : '#064E3B');
+                    const iconPill = tienePend ? `⏳ ${f.pendientes}` : `✅`;
+
+                    pillsHtml += `
+                        <button type="button" onclick="cambiarFiltroFacturaCalidad('${f.numero}')"
+                            style="height: 32px; padding: 0 12px; font-size: 11.5px; font-weight: 700; border-radius: 8px; border: 1.5px solid ${borderPill}; background: ${bgPill}; color: #FFFFFF; white-space: nowrap; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;">
+                            <span>📄 Fac ${f.numero}</span>
+                            <span style="font-size: 10px; background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px;">${iconPill}</span>
+                        </button>
+                    `;
+                });
+                pillsFac.innerHTML = pillsHtml;
+            }
+
+            if (badgeFacInfo) {
+                if (filtroFacturaCalidad !== "TODAS" && facturasSemanaMap[filtroFacturaCalidad]) {
+                    const fActual = facturasSemanaMap[filtroFacturaCalidad];
+                    badgeFacInfo.innerHTML = `Mostrando Factura <strong>#${fActual.numero}</strong> · ${fActual.pendientes} pend / ${fActual.total} prod (${fActual.plantas.toLocaleString()} pl)`;
+                } else {
+                    badgeFacInfo.innerHTML = `Mostrando todas las facturas (${listaFacturas.length} cargadas)`;
+                }
+            }
+
+            // Filtrar recepciones por la Factura Padre seleccionada
+            let itemsFiltrados = recepcionesSemana;
+            if (filtroFacturaCalidad !== "TODAS") {
+                itemsFiltrados = itemsFiltrados.filter(r => (r.numero_factura || r.codigo_guia || "S/N").trim() === filtroFacturaCalidad);
+            }
+
+            const pendientes = itemsFiltrados.filter(r => r.estado_flujo === "VALIDADO_DESCARGUE");
+            const calificadas = itemsFiltrados.filter(r => r.estado_flujo === "COMPLETADA");
 
             if (badge) {
                 badge.innerHTML = `
@@ -5254,11 +5440,12 @@
                 const tieneCalificadas = calificadas.length > 0;
                 const idsCalificadas = calificadas.map(r => r.id).filter(Boolean).join(",");
                 const urlExcel = idsCalificadas ? `/exportar/excel/?ids=${idsCalificadas}` : `/exportar/excel/?semana=${semActual}`;
+                const recsParaWpp = tieneCalificadas ? calificadas : itemsFiltrados;
 
                 filtrosCont.innerHTML = `
                     <button type="button" onclick="cambiarFiltroBannerEstado('TODAS')"
                         style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; border: 1px solid ${filtroBannerEstado === 'TODAS' ? '#38BDF8' : '#475569'}; background: ${filtroBannerEstado === 'TODAS' ? '#0284C7' : '#1E293B'}; color: #FFFFFF; cursor: pointer;">
-                        Todas (${recepcionesSemana.length})
+                        Todos (${itemsFiltrados.length})
                     </button>
                     <button type="button" onclick="cambiarFiltroBannerEstado('PENDIENTES')"
                         style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; border: 1px solid ${filtroBannerEstado === 'PENDIENTES' ? '#38BDF8' : '#475569'}; background: ${filtroBannerEstado === 'PENDIENTES' ? '#0284C7' : '#1E293B'}; color: #FFFFFF; cursor: pointer;">
@@ -5269,7 +5456,7 @@
                         ✅ Calificadas (${calificadas.length})
                     </button>
                     ${tieneCalificadas ? `
-                        <button type="button" onclick="abrirFichaResumenWhatsappMulti()"
+                        <button type="button" onclick="abrirFichaResumenWhatsappMulti(obtenerRecepcionesDeFactura('${filtroFacturaCalidad}'))"
                             style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 800; border-radius: 6px; border: 1px solid #10B981; background: #25D366; color: #052E16; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                             title="Ver resumen consolidado para WhatsApp">
                             📲 WhatsApp
@@ -5290,8 +5477,8 @@
                 `;
             }
 
-            // Aplicar filtro seleccionado
-            let itemsParaMostrar = recepcionesSemana;
+            // Aplicar filtro de estado (TODAS, PENDIENTES, CALIFICADAS)
+            let itemsParaMostrar = itemsFiltrados;
             if (filtroBannerEstado === 'PENDIENTES') itemsParaMostrar = pendientes;
             else if (filtroBannerEstado === 'CALIFICADAS') itemsParaMostrar = calificadas;
 
@@ -5307,7 +5494,7 @@
             if (itemsParaMostrar.length === 0) {
                 lista.innerHTML = `
                     <div style="padding: 16px; text-align: center; color: #94A3B8; font-size: 12.5px; width: 100%;">
-                        No hay recepciones en este filtro (${filtroBannerEstado.toLowerCase()}).
+                        No hay recepciones en este filtro (${filtroBannerEstado.toLowerCase()}) para la factura seleccionada.
                     </div>
                 `;
                 return;
@@ -5726,6 +5913,10 @@
                 productoMaestroActual = r.producto_maestro;
                 filtroPMPaso4 = r.producto_maestro || "TODOS";
                 filtroPMPaso3 = filtroPMPaso4;
+                const numFacR = (r.numero_factura || r.codigo_guia || "").trim();
+                if (numFacR && pasoDestino === 4) {
+                    filtroFacturaCalidad = numFacR;
+                }
                 fotosRecepcionActual = r.fotos || [];
                 tieneNovedadesDescargue = Boolean(r.tiene_novedades_descargue);
                 observacionesDescargue = r.observaciones_descargue || "";
@@ -7482,6 +7673,13 @@
                 const p4 = document.getElementById("step-panel-4");
                 if (p4) p4.style.display = "block";
                 renderizarBannerGuiasPendientesCalidad();
+                if (!recepcionIdActual) {
+                    const pend = (historialRecepciones || []).find(r => r.estado_flujo === "VALIDADO_DESCARGUE");
+                    if (pend) {
+                        cargarRecepcionParaEditar(pend.id, 4);
+                        return;
+                    }
+                }
                 renderizarPaso4Calificacion();
             } else if (vista === "historial") {
                 poblarSelectoresFiltroReportes();
