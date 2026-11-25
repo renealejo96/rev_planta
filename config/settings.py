@@ -22,11 +22,23 @@ ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if h.strip()
 ]
 
-CSRF_TRUSTED_ORIGINS_ENV = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+# Acepta tanto CSRF_TRUSTED_ORIGINS como CSR_TRUSTED_ORIGINS (por tolerancia a errores de tipeo)
+CSRF_TRUSTED_ORIGINS_ENV = os.environ.get('CSRF_TRUSTED_ORIGINS') or os.environ.get('CSR_TRUSTED_ORIGINS', '')
 if CSRF_TRUSTED_ORIGINS_ENV:
     CSRF_TRUSTED_ORIGINS = [
         o.strip() for o in CSRF_TRUSTED_ORIGINS_ENV.split(',') if o.strip()
     ]
+    # Agrega automáticamente los dominios/IPs de confianza a ALLOWED_HOSTS si no estaban
+    for origin in CSRF_TRUSTED_ORIGINS:
+        host_solo = origin.replace('https://', '').replace('http://', '').split('/')[0].split(':')[0].strip()
+        if host_solo and host_solo not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host_solo)
+        # Si es un subdominio o dominio, permitir también wildcard .dominio
+        partes = host_solo.split('.')
+        if len(partes) >= 2 and not partes[0].isdigit():
+            base_domain = f".{'.'.join(partes[-2:])}"
+            if base_domain not in ALLOWED_HOSTS:
+                ALLOWED_HOSTS.append(base_domain)
 
 # Puerto dedicado para evitar colisiones con otras apps en el VPS / Nginx
 APP_PORT = int(os.environ.get('APP_PORT', 8420))
