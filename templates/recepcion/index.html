@@ -1536,17 +1536,17 @@
             <!-- PASO 4: FILTRO POR PRODUCTO MAESTRO + BANDEJAS/GAVETAS (10%) + CALIFICACIÓN 1, 2, 3 -->
             <div id="step-panel-4" class="wizard-step">
                 <div class="card">
-                    <div class="card-header">
-                        <span class="step-tag">Paso 4 de 4 · Filtrar Producto, Bandejas/Gavetas (10%) y Calificar 1-2-3</span>
-                        <h2 class="card-title">Calificación por Producto Maestro y Variedad</h2>
-                        <p class="card-subtitle">Filtra por <strong>Producto Maestro</strong> (ej. HYPERICUM, GYPSOPHILA), elige si llegó en <strong>Bandejas o Gavetas</strong> para calcular el 10% (15 plantas: 5-5-5) y califica los parámetros del 1 al 3.</p>
+                    <div class="card-header" style="background: #F8FAFC; border-bottom: 1.5px solid #E2E8F0; padding: 14px 18px;">
+                        <span class="step-tag" id="tag-paso4-pm" style="background: #0F172A; color: #38BDF8;">Paso 4 de 4 · Muestreo (10%) y Calificación</span>
+                        <h2 class="card-title" id="titulo-paso4-pm" style="font-size: 18px; margin-top: 4px;">Calificación por Producto Maestro y Variedad</h2>
+                        <p class="card-subtitle" id="subtitulo-paso4-pm" style="font-size: 12.5px; color: #475569;">Pulsa en "🔍 Calificar →" sobre cualquiera de las recepciones validadas arriba para comenzar.</p>
                     </div>
                     <div class="card-body">
                         <!-- Alerta visual de Novedades de Descargue visible para el Asegurador de Calidad -->
                         <div id="alerta-novedades-en-paso4" style="display: none; background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px;"></div>
 
-                        <!-- Barra de botones de filtro por Producto Maestro (ej. HYPERICUM, GYPSOPHILA) -->
-                        <div id="barra-filtro-pm-paso3" style="margin-bottom: 14px;"></div>
+                        <!-- Barra secundaria desactivada para que el único control sea la tarjeta de guías validadas superior -->
+                        <div id="barra-filtro-pm-paso3" style="display: none !important;"></div>
 
                         <div id="tabs-variedades-paso3" class="variety-tabs-strip"></div>
                         <div id="contenedor-parametros-paso3"></div>
@@ -2802,92 +2802,39 @@
         }
 
         function obtenerIndicesVariedadesFiltradasPaso3() {
-            const pms = obtenerProductosMaestrosEnFactura();
-            if (filtroPMPaso3 !== "TODOS" && !pms.includes(filtroPMPaso3)) {
-                filtroPMPaso3 = pms[0] || "TODOS";
-            }
+            // Sincronización estricta con el Producto Maestro de la guía seleccionada
+            const pmFiltro = productoMaestroActual || filtroPMPaso3 || "";
             const indices = [];
             variedadesAgregadas.forEach((v, idx) => {
-                if (filtroPMPaso3 === "TODOS" || v.producto_maestro === filtroPMPaso3) {
+                if (!pmFiltro || pmFiltro === "TODOS" || (v.producto_maestro || "").toUpperCase() === pmFiltro.toUpperCase()) {
                     indices.push(idx);
                 }
             });
-            return indices;
+            return indices.length > 0 ? indices : variedadesAgregadas.map((_, idx) => idx);
         }
 
         function seleccionarFiltroPMPaso3(nuevoPM) {
+            const recPendiente = (historialRecepciones || []).find(r => r.estado_flujo === "VALIDADO_DESCARGUE" && (r.producto_maestro || "").toUpperCase() === (nuevoPM || "").toUpperCase());
+            if (recPendiente) {
+                cargarRecepcionParaEditar(recPendiente.id, 4);
+                return;
+            }
             filtroPMPaso3 = nuevoPM;
+            productoMaestroActual = nuevoPM;
             const indices = obtenerIndicesVariedadesFiltradasPaso3();
             if (indices.length > 0 && !indices.includes(indiceVariedadPaso3)) {
                 indiceVariedadPaso3 = indices[0];
             }
-            renderizarPaso3Calificacion();
+            renderizarPaso4Calificacion();
         }
 
         function renderizarBarraFiltroPMPaso3() {
+            // Barra secundaria desactivada para que no haya desfase con el selector superior
             const barra = document.getElementById("barra-filtro-pm-paso3");
-            if (!barra) return;
-            const pms = obtenerProductosMaestrosEnFactura();
-            if (pms.length === 0) {
+            if (barra) {
                 barra.innerHTML = "";
-                return;
+                barra.style.display = "none";
             }
-
-            let botonesHtml = pms.map(pm => {
-                const varsPM = variedadesAgregadas.filter(v => (v.producto_maestro || "").toUpperCase() === pm.toUpperCase());
-                const activo = filtroPMPaso3 === pm;
-                const estaCalificado = productosMaestrosCalificados.has(pm);
-                const badgeStatus = estaCalificado
-                    ? `<span class="tabular" style="background: #16A34A; color: #FFFFFF; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;">✅ CALIFICADO</span>`
-                    : `<span class="tabular" style="background: #D97706; color: #FFFFFF; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;">⏳ PENDIENTE</span>`;
-
-                return `
-                    <button type="button"
-                        onclick="seleccionarFiltroPMPaso3('${pm}')"
-                        style="height: 38px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.15s ease;
-                        ${activo
-                            ? 'background: #0F172A; color: #38BDF8; border: 2px solid #38BDF8; box-shadow: 0 3px 10px rgba(15,23,42,0.2);'
-                            : 'background: #F8FAFC; color: #334155; border: 1.5px solid #CBD5E1;'
-                        }">
-                        <span>🌿 ${pm}</span>
-                        ${badgeStatus}
-                    </button>
-                `;
-            }).join("");
-
-            if (pms.length > 1) {
-                const actTodos = filtroPMPaso3 === "TODOS";
-                botonesHtml += `
-                    <button type="button"
-                        onclick="seleccionarFiltroPMPaso3('TODOS')"
-                        style="height: 38px; padding: 0 12px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;
-                        ${actTodos
-                            ? 'background: #0F172A; color: #FFFFFF; border: 2px solid #0F172A;'
-                            : 'background: #FFFFFF; color: #64748B; border: 1px dashed #94A3B8;'
-                        }">
-                        Ver Todos (${variedadesAgregadas.length})
-                    </button>
-                `;
-            }
-
-            const totalCalificados = pms.filter(pm => productosMaestrosCalificados.has(pm)).length;
-            const todosCompletos = totalCalificados === pms.length;
-
-            barra.innerHTML = `
-                <div style="background: #F1F5F9; border: 1.5px solid ${todosCompletos ? '#86EFAC' : '#CBD5E1'}; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                        <span style="font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: #475569;">
-                            🔍 Productos Maestros en Factura:
-                        </span>
-                        ${botonesHtml}
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="font-size: 12px; font-weight: 700; color: ${todosCompletos ? '#15803D' : '#B45309'};">
-                            ${todosCompletos ? '🎉 Todos Calificados' : `⏳ Calificados: ${totalCalificados}/${pms.length}`}
-                        </span>
-                    </div>
-                </div>
-            `;
         }
 
         function renderizarTabsVariedadesPaso3() {
@@ -3852,13 +3799,19 @@
         function renderizarPaso4Calificacion() {
             const strip = document.getElementById("tabs-variedades-paso3");
             const contenedor = document.getElementById("contenedor-parametros-paso3");
+            const tagEl = document.getElementById("tag-paso4-pm");
+            const tituloEl = document.getElementById("titulo-paso4-pm");
+            const subtituloEl = document.getElementById("subtitulo-paso4-pm");
 
             if (!recepcionIdActual || variedadesAgregadas.length === 0) {
                 if (strip) strip.innerHTML = "";
                 const barraPM = document.getElementById("barra-filtro-pm-paso3");
-                if (barraPM) barraPM.innerHTML = "";
+                if (barraPM) { barraPM.innerHTML = ""; barraPM.style.display = "none"; }
                 const bannerNovedades = document.getElementById("alerta-novedades-en-paso4");
                 if (bannerNovedades) bannerNovedades.style.display = "none";
+                if (tagEl) tagEl.textContent = "Paso 4 de 4 · Muestreo (10%) y Calificación";
+                if (tituloEl) tituloEl.textContent = "Calificación por Producto Maestro y Variedad";
+                if (subtituloEl) subtituloEl.textContent = "Pulsa en '🔍 Calificar →' sobre cualquiera de las recepciones validadas arriba para comenzar.";
                 if (contenedor) {
                     const pendientes = (historialRecepciones || []).filter(r => r.estado_flujo === "VALIDADO_DESCARGUE");
                     contenedor.innerHTML = `
@@ -3878,6 +3831,15 @@
                 return;
             }
 
+            // Sincronizar título y subtítulo con la recepción seleccionada
+            if (tagEl) tagEl.textContent = `Paso 4 de 4 · Muestreo (10%) y Calificación · ${productoMaestroActual}`;
+            if (tituloEl) tituloEl.textContent = `Calificación de Calidad: ${productoMaestroActual}`;
+            if (subtituloEl) {
+                const recActiva = (historialRecepciones || []).find(r => r.id === recepcionIdActual) || {};
+                const numFac = document.getElementById("input-numero-factura")?.value || recActiva.numero_factura || "";
+                subtituloEl.innerHTML = `Auditoría técnica de <strong>${productoMaestroActual}</strong> ${numFac ? `(Factura #${numFac})` : ''}. Verifica si llegó en <strong>Gavetas o Bandejas</strong> para calcular el 10% y califica cada parámetro del 1 al 3.`;
+            }
+
             // Alerta visible de Novedades de Descargue si existen
             const bannerNovedades = document.getElementById("alerta-novedades-en-paso4");
             if (bannerNovedades) {
@@ -3895,7 +3857,12 @@
                 }
             }
 
-            renderizarBarraFiltroPMPaso3();
+            // Aseguramos que la barra secundaria esté apagada para evitar desfases
+            const barraPM = document.getElementById("barra-filtro-pm-paso3");
+            if (barraPM) { barraPM.innerHTML = ""; barraPM.style.display = "none"; }
+
+            // Siempre sincronizado con el Producto Maestro actual
+            filtroPMPaso3 = productoMaestroActual;
             const indicesFiltrados = obtenerIndicesVariedadesFiltradasPaso3();
             if (indicesFiltrados.length > 0 && !indicesFiltrados.includes(indiceVariedadPaso3)) {
                 indiceVariedadPaso3 = indicesFiltrados[0];
@@ -3918,40 +3885,7 @@
             const cal = calcularCalificacionVariedad(itemVar);
             const posRelativa = Math.max(1, indicesFiltrados.indexOf(indiceVariedadPaso3) + 1);
 
-            const recActiva = (historialRecepciones || []).find(r => r.id === recepcionIdActual) || {};
-            const numFac = document.getElementById("input-numero-factura")?.value || recActiva.numero_factura || "";
-            const codGuia = document.getElementById("input-codigo-guia")?.value || recActiva.codigo_guia || "";
-            const totPlLlegaron = variedadesAgregadas.reduce((sum, v) => sum + (v.plantas_recibidas || 0), 0);
-            const totContLlegaron = variedadesAgregadas.reduce((sum, v) => sum + (v.contenedores_recibidos || 0), 0);
-
-            const cabeceraGuiaActivaHtml = `
-                <div style="background: linear-gradient(135deg, #064E3B 0%, #0F172A 100%); border: 2px solid #34D399; border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; color: #FFFFFF; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 12px rgba(6, 78, 59, 0.35);">
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="background: #10B981; color: #064E3B; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 5px; text-transform: uppercase;">
-                                🔬 Auditando Calidad
-                            </span>
-                            <span style="font-size: 12px; color: #6EE7B7; font-weight: 700;">Guía: ${codGuia}</span>
-                        </div>
-                        <div style="font-size: 16px; font-weight: 800; color: #FFFFFF; margin-top: 3px;">
-                            🌿 ${productoMaestroActual || recActiva.producto_maestro || 'PRODUCTO'} ${numFac ? `· Factura #${numFac}` : ''}
-                        </div>
-                        <div style="font-size: 11.5px; color: #CBD5E1; margin-top: 2px;">
-                            Validado por Descargue: <strong>${responsableDescargue || recActiva.responsable_descargue || recActiva.responsable || 'Descargue'}</strong> · ${totPlLlegaron.toLocaleString()} pl (${totContLlegaron} unid.)
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button type="button" class="btn-action" style="background: #25D366; color: #052E16; font-size: 12px; font-weight: 800; height: 34px; padding: 0 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.35);" onclick="abrirFichaResumenWhatsapp()">
-                            📲 Ficha WhatsApp
-                        </button>
-                        <button type="button" class="btn-action" style="background: rgba(255,255,255,0.15); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.3); font-size: 12px; font-weight: 700; height: 34px; padding: 0 12px; border-radius: 8px;" onclick="deseleccionarGuiaParaAuditar()">
-                            🔄 Cambiar de Guía
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            // Bloque en Paso 3 para elegir Bandejas o Gavetas e ingresar cuántas llegaron
+            // Bloque en Paso 4 para elegir Gavetas o Bandejas e ingresar cuántas llegaron
             let lotesPaso3Html = "";
             (itemVar.lotes || []).forEach((lote, lIdx) => {
                 const tLote = lote.tipo_contenedor || "BANDEJA";
@@ -3999,8 +3933,6 @@
             });
 
             let html = `
-                ${cabeceraGuiaActivaHtml}
-
                 <div style="background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
                     ${lotesPaso3Html}
                 </div>
@@ -4959,7 +4891,12 @@
             cerrarPreviewGuiaManuscrita();
             actualizarSemanaDesdeFecha(false);
             verificarAvisosProductoYaAsignado();
-            irAPaso(1);
+            if (ES_ASEGURADOR_CALIDAD) {
+                irAPaso(4);
+            } else {
+                irAPaso(1);
+            }
+            renderizarBannerGuiasPendientesCalidad();
         }
 
         function actualizarOInsertarEnHistorialLocal(rec) {
@@ -5073,7 +5010,8 @@
 
                 cambiarVista("recepcion");
                 irAPaso(pasoDestino);
-                mostrarToast(`✏️ Editando en Paso ${pasoDestino}: ${r.producto_maestro} (${r.codigo_guia}).`);
+                renderizarBannerGuiasPendientesCalidad();
+                mostrarToast(`🌿 Calificando: ${r.producto_maestro} (${r.codigo_guia}).`);
             } catch (e) {
                 mostrarToast("⚠️ No se pudo cargar la recepción para editar.", true);
             }
@@ -5585,6 +5523,8 @@
                     recepcionIdActual = b.recepcion_id || null;
                     recepcionIdsPorPM = b.recepcion_ids_por_pm || {};
                     productoMaestroActual = b.producto_maestro || "";
+                    filtroPMPaso3 = productoMaestroActual;
+                    filtroPMPaso4 = productoMaestroActual;
                     variedadesAgregadas = b.variedades;
                     tieneNovedadesDescargue = Boolean(b.tiene_novedades_descargue);
                     observacionesDescargue = b.observaciones_descargue || "";
