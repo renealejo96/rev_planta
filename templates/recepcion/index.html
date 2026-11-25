@@ -1495,11 +1495,11 @@
                         <!-- Subtabs para Variedades o Conteo Físico -->
                         <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                             <div style="display: flex; gap: 8px;">
-                                <button type="button" id="btn-subtab-descargue-conteo" class="btn-action" style="background: #112218; color: #FFFFFF; font-weight: 800; font-size: 13px; height: 36px; padding: 0 14px;" onclick="irAPaso(3)">
-                                    📦 Conteo Físico en Furgón
+                                <button type="button" id="btn-subtab-descargue-vars" class="btn-action" style="background: #112218; color: #FFFFFF; font-weight: 800; font-size: 13px; height: 36px; padding: 0 14px;" onclick="irAPaso(2)">
+                                    🌱 1. Variedades y Catálogo
                                 </button>
-                                <button type="button" id="btn-subtab-descargue-vars" class="btn-action" style="background: #F1F5F9; color: #334155; font-weight: 700; font-size: 13px; height: 36px; padding: 0 14px;" onclick="irAPaso(2)">
-                                    🌱 Variedades y Catálogo (+)
+                                <button type="button" id="btn-subtab-descargue-conteo" class="btn-action" style="background: #F1F5F9; color: #334155; font-weight: 700; font-size: 13px; height: 36px; padding: 0 14px;" onclick="irAPaso(3)">
+                                    📦 2. Conteo Físico en Furgón
                                 </button>
                             </div>
                             <label class="btn-action" style="background: #16A34A; color: #FFFFFF; cursor: pointer; height: 36px; padding: 0 12px; font-size: 12px; font-weight: 800; border-radius: 8px;">
@@ -1509,7 +1509,7 @@
                         </div>
 
                         <!-- PASO 2: VARIEDADES -->
-                        <div id="step-panel-2" class="wizard-step" style="display: none;">
+                        <div id="step-panel-2" class="wizard-step active" style="display: block;">
                             <div id="contenedor-progreso-ocr-paso2" style="display: none; margin-bottom: 12px; background: #0F172A; border: 1.5px solid #38BDF8; border-radius: 10px; padding: 10px 14px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                                     <span id="texto-etapa-ocr-paso2" style="font-size: 12.5px; font-weight: 700; color: #38BDF8;">⏳ Procesando factura adicional...</span>
@@ -1540,13 +1540,13 @@
                             <div id="lista-variedades-agregadas" class="variedades-grid-responsive"></div>
                             <div style="margin-top: 14px; text-align: right;">
                                 <button type="button" class="btn-action" style="background: #0284C7; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 18px;" onclick="irAPaso(3)">
-                                    Continuar al Conteo Físico (Paso 3) →
+                                    Continuar al Conteo Físico (Paso 2 de 2) →
                                 </button>
                             </div>
                         </div>
 
                         <!-- PASO 3: CONTEO FÍSICO Y NOVEDADES -->
-                        <div id="step-panel-3" class="wizard-step active" style="display: block;">
+                        <div id="step-panel-3" class="wizard-step" style="display: none;">
                             <div id="contenedor-consolidado-paso3"></div>
                         </div>
                     </div>
@@ -3445,6 +3445,9 @@
                         </div>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" class="btn-action" style="background: #F1F5F9; color: #334155; border: 1.5px solid #CBD5E1; font-weight: 700; height: 44px; padding: 0 16px; font-size: 13px; border-radius: 8px;" onclick="irAPaso(2)">
+                            ← Volver a Variedades y Catálogo
+                        </button>
                         ${ES_PERSONAL_DESCARGUE ? `
                             <button type="button" class="btn-action" style="background: #16A34A; color: #FFFFFF; font-weight: 800; height: 44px; padding: 0 20px; font-size: 14px; border-radius: 8px; box-shadow: 0 3px 10px rgba(22, 163, 74, 0.35);" onclick="validarDescargueYEnviar()">
                                 📤 Validar Descargue y Enviar a Calidad
@@ -5257,8 +5260,8 @@
             indiceVariedadPaso3 = 0;
             indiceVariedadPaso4 = 0;
 
-            // Mostrar Conteo Físico en Furgón
-            irAPaso(3);
+            // Mostrar primero Variedades y Catálogo (Paso 1 del descargue) para validar nombres
+            irAPaso(2);
         }
 
         function deseleccionarGuiaParaAuditar() {
