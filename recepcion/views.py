@@ -5,6 +5,7 @@ import difflib
 import io
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from django.contrib.auth import authenticate, login, logout
@@ -982,7 +983,7 @@ def api_escanear_guia_manuscrita(request):
     maestro_dict, _ = cargar_maestro_pros()
 
     gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip()
-    if not gemini_key:
+    if not gemini_key or gemini_key.startswith("tu_api_key"):
         return JsonResponse(
             {
                 "ok": False,
@@ -990,7 +991,7 @@ def api_escanear_guia_manuscrita(request):
                 "error": (
                     "La foto de la guía se cargó en pantalla para lectura asistida. "
                     "Para activar la extracción automática de letra escrita a mano con esfero, "
-                    "agrega GEMINI_API_KEY=tu_api_key en tu archivo .env."
+                    "agrega GEMINI_API_KEY=tu_api_key en tu archivo .env y reinicia el contenedor con docker compose restart web."
                 ),
             }
         )
@@ -1063,8 +1064,10 @@ def api_escanear_guia_manuscrita(request):
         }
 
         modelos_vision = [
-            "gemini-3.1-flash-lite",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
             "gemini-flash-lite-latest",
+            "gemini-3.6-flash",
             "gemini-3.8-flash",
             "gemini-3.7-flash",
             "gemini-flash-latest",
@@ -1081,22 +1084,26 @@ def api_escanear_guia_manuscrita(request):
                     headers={"Content-Type": "application/json"},
                     method="POST",
                 )
-                with urllib.request.urlopen(req, timeout=18) as resp:
+                with urllib.request.urlopen(req, timeout=14) as resp:
                     resp_data = json.loads(resp.read().decode("utf-8"))
-                    break
+                    if resp_data.get("candidates"):
+                        break
             except Exception as err_m:
                 ultimo_error = err_m
                 continue
 
-        if not resp_data:
-            raise RuntimeError(ultimo_error or "Servicio de visión temporalmente ocupado")
+        if not resp_data or not resp_data.get("candidates"):
+            raise RuntimeError(f"{ultimo_error or 'Servicio de visión temporalmente ocupado'}")
 
-        texto_json = (
-            resp_data.get("candidates", [{}])[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "{}")
-        )
+        candidatos_ia = resp_data.get("candidates") or []
+        partes = candidatos_ia[0].get("content", {}).get("parts", [])
+        bloques_texto = [p.get("text", "") for p in partes if isinstance(p, dict) and p.get("text")]
+        texto_json = "\n".join(bloques_texto).strip()
+
+        if "```" in texto_json:
+            m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", texto_json)
+            texto_json = m.group(1).strip() if m else texto_json.replace("```json", "").replace("```", "").strip()
+
         datos_brutos = json.loads(texto_json)
 
         # Normalizar y clasificar cada fila en: identificada vs requiere_revision
