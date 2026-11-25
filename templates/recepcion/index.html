@@ -1360,7 +1360,7 @@
         <!-- VISTA 1: CARGA DE FACTURAS (PANTALLA LIMPIA PARA ESCANEAR DÍA TRAS DÍA)-->
         <!-- ===================================================================== -->
         <section id="vista-facturas" class="view-panel {% if rol_usuario != 'CALIDAD' %}active{% endif %}">
-            <div id="step-panel-1" class="wizard-step active">
+            <div id="step-panel-1" style="display: block; width: 100%;">
                 <div class="card" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 14px; overflow: hidden; margin-bottom: 16px;">
                     <div class="card-header" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #FFFFFF; padding: 18px 20px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -1581,7 +1581,7 @@
             </div>
 
             <!-- Panel de Auditoría Técnica y Parámetros (Paso 4) -->
-            <div id="step-panel-4" class="wizard-step active">
+            <div id="step-panel-4" style="display: block; width: 100%;">
                 <div class="card" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 14px; overflow: hidden;">
                     <div class="card-header" style="background: #F8FAFC; border-bottom: 1.5px solid #E2E8F0; padding: 14px 18px;">
                         <span class="step-tag" id="tag-paso4-pm" style="background: #0F172A; color: #38BDF8;">Paso 4 de 4 · Muestreo (10%) y Calificación</span>
@@ -5413,23 +5413,30 @@
             if (numPaso > pasoActual && !validarPasoActual(numPaso)) return;
             pasoActual = numPaso;
 
-            for (let i = 1; i <= 4; i++) {
-                const panel = document.getElementById(`step-panel-${i}`);
-                if (panel) panel.classList.toggle("active", i === pasoActual);
-                const pill = document.getElementById(`pill-step-${i}`);
-                if (pill) {
-                    pill.classList.remove("active", "completed");
-                    if (i === pasoActual) pill.classList.add("active");
-                    else if (i < pasoActual) pill.classList.add("completed");
-                }
-            }
+            const p1 = document.getElementById("step-panel-1");
+            if (p1) p1.style.display = "block";
 
-            if (pasoActual === 2) {
+            const p2 = document.getElementById("step-panel-2");
+            const p3 = document.getElementById("step-panel-3");
+            const btnSubConteo = document.getElementById("btn-subtab-descargue-conteo");
+            const btnSubVars = document.getElementById("btn-subtab-descargue-vars");
+
+            if (numPaso === 2) {
+                if (p2) p2.style.display = "block";
+                if (p3) p3.style.display = "none";
+                if (btnSubVars) { btnSubVars.style.background = "#112218"; btnSubVars.style.color = "#FFFFFF"; }
+                if (btnSubConteo) { btnSubConteo.style.background = "#F1F5F9"; btnSubConteo.style.color = "#334155"; }
                 actualizarSlicerVariedadesPaso2();
                 renderizarListaVariedadesAgregadasPaso2();
-            } else if (pasoActual === 3) {
+            } else if (numPaso === 3) {
+                if (p3) p3.style.display = "block";
+                if (p2) p2.style.display = "none";
+                if (btnSubConteo) { btnSubConteo.style.background = "#112218"; btnSubConteo.style.color = "#FFFFFF"; }
+                if (btnSubVars) { btnSubVars.style.background = "#F1F5F9"; btnSubVars.style.color = "#334155"; }
                 renderizarPaso3Consolidado();
-            } else if (pasoActual === 4) {
+            } else if (numPaso === 4) {
+                const p4 = document.getElementById("step-panel-4");
+                if (p4) p4.style.display = "block";
                 renderizarPaso4Calificacion();
             }
 
@@ -7457,10 +7464,14 @@
             if (barraWizard) barraWizard.style.display = "none";
 
             if (vista === "facturas") {
+                const p1 = document.getElementById("step-panel-1");
+                if (p1) p1.style.display = "block";
                 renderizarListaFacturasCargadas();
             } else if (vista === "descargue") {
                 renderizarSelectorFacturasDescargue();
             } else if (vista === "calidad") {
+                const p4 = document.getElementById("step-panel-4");
+                if (p4) p4.style.display = "block";
                 renderizarBannerGuiasPendientesCalidad();
                 renderizarPaso4Calificacion();
             } else if (vista === "historial") {
