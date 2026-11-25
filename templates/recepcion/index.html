@@ -1866,103 +1866,33 @@
         </div>
     </div>
 
-    <!-- Modal de Ficha Resumen y Collage para WhatsApp -->
+    <!-- Modal de Ficha Resumen y Collage para WhatsApp (Soporta Múltiples Productos de Recepción) -->
     <div id="modal-ficha-whatsapp" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;" onclick="if(event.target===this) cerrarFichaResumenWhatsapp()">
-        <div class="modal-dialog" style="max-width: 560px; background: #0F172A; border: 2px solid #38BDF8; color: #FFFFFF;">
-            <div class="card-header" style="background: #1E293B; border-bottom: 1.5px solid #334155; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px;">
+        <div class="modal-dialog" style="max-width: 640px; width: 95%; max-height: 92vh; display: flex; flex-direction: column; background: #0F172A; border: 2px solid #38BDF8; border-radius: 16px; color: #FFFFFF; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
+            <div class="card-header" style="background: #1E293B; border-bottom: 1.5px solid #334155; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; flex-shrink: 0;">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 20px;">📲</span>
+                    <span style="font-size: 22px;">📲</span>
                     <div>
-                        <h3 class="card-title" style="color: #FFFFFF; font-size: 15px;">Ficha Resumen para WhatsApp</h3>
-                        <p class="card-subtitle" style="color: #38BDF8; font-size: 11px;">Captura de pantalla limpia para enviar al grupo técnico / agronómico</p>
+                        <h3 class="card-title" style="color: #FFFFFF; font-size: 15.5px; margin: 0;">Ficha Resumen para WhatsApp</h3>
+                        <p class="card-subtitle" style="color: #38BDF8; font-size: 11px; margin: 2px 0 0;">Captura infográfica limpia y reporte técnico para enviar al grupo</p>
                     </div>
                 </div>
-                <div style="display: flex; gap: 6px;">
-                    <button type="button" class="btn-action" style="height: 32px; font-size: 12px; background: #25D366; color: #052E16; font-weight: 800;" onclick="copiarReporteTextoWhatsapp()">
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn-action" style="height: 34px; font-size: 12px; background: #25D366; color: #052E16; font-weight: 800; border-radius: 8px; box-shadow: 0 2px 6px rgba(37, 211, 102, 0.4);" onclick="copiarReporteTextoWhatsapp()">
                         📋 Copiar Texto
                     </button>
-                    <button type="button" class="btn-remove" style="height: 32px; padding: 0 10px;" onclick="cerrarFichaResumenWhatsapp()">✕ Cerrar</button>
+                    <a id="btn-modal-excel-dl" href="/exportar/excel/" class="btn-action" style="height: 34px; font-size: 12px; background: #15803D; color: #FFFFFF; font-weight: 700; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Descargar informe en Excel (.xlsx)">
+                        📊 Excel (.xlsx)
+                    </a>
+                    <button type="button" class="btn-remove" style="height: 34px; padding: 0 10px; border-radius: 8px;" onclick="cerrarFichaResumenWhatsapp()">✕</button>
                 </div>
             </div>
-            <div class="card-body" style="padding: 16px; background: #0B1120;">
-                <!-- Tarjeta Infográfica / Ficha Técnica para Captura -->
-                <div id="tarjeta-captura-whatsapp" style="background: #111827; border: 1.5px solid #374151; border-radius: 14px; padding: 16px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
-                    <!-- Cabecera Institucional -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #374151; padding-bottom: 10px; margin-bottom: 12px; gap: 10px;">
-                        <div>
-                            <span style="background: #15803D; color: #DCFCE7; font-size: 9.5px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">
-                                🌿 CONTROL DE CALIDAD · PLANTA
-                            </span>
-                            <h2 id="wa-producto-variedad" style="font-size: 18px; font-weight: 800; color: #FFFFFF; margin-top: 4px; line-height: 1.2;">
-                                PRODUCTO · VARIEDAD
-                            </h2>
-                            <div id="wa-factura-guia" style="font-size: 11.5px; color: #9CA3AF; margin-top: 2px;">
-                                Factura: S/N · Guía: REC
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 9.5px; color: #9CA3AF; text-transform: uppercase;">Calificación Global</div>
-                            <div id="wa-badge-calidad" style="font-size: 17px; font-weight: 800; color: #4ADE80;">
-                                100% · ÓPTIMO
-                            </div>
-                            <div id="wa-fecha-auditor" style="font-size: 10.5px; color: #D1D5DB; margin-top: 2px;">
-                                Fecha · Sem
-                            </div>
-                        </div>
-                    </div>
+            <div class="card-body" style="padding: 14px; background: #070D18; overflow-y: auto; flex: 1;">
+                <!-- Tarjeta Infográfica Dinámica por Producto para Captura -->
+                <div id="contenedor-tarjeta-captura-whatsapp"></div>
 
-                    <!-- Métricas Clave de Muestreo (10% real) -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                        <div style="background: #1F2937; border-radius: 8px; padding: 8px 10px;">
-                            <div style="font-size: 9.5px; color: #9CA3AF; text-transform: uppercase;">Llegaron Físico</div>
-                            <div id="wa-stat-llegaron" style="font-size: 15px; font-weight: 800; color: #38BDF8;">
-                                0 pl
-                            </div>
-                            <div id="wa-stat-gavetas" style="font-size: 10.5px; color: #D1D5DB;">
-                                0 unidades
-                            </div>
-                        </div>
-                        <div style="background: #1F2937; border-radius: 8px; padding: 8px 10px;">
-                            <div style="font-size: 9.5px; color: #9CA3AF; text-transform: uppercase;">Muestreo 10% (100% Gavetas)</div>
-                            <div id="wa-stat-muestreadas" style="font-size: 15px; font-weight: 800; color: #FCD34D;">
-                                0 gavetas
-                            </div>
-                            <div id="wa-stat-pl-revisadas" style="font-size: 10.5px; color: #4ADE80;">
-                                0 pl evaluadas
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Novedades de Descargue si existen -->
-                    <div id="wa-alerta-descargue" style="display: none; background: rgba(245, 158, 11, 0.15); border: 1px solid #F59E0B; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; font-size: 11px; color: #FDE047;">
-                        <strong>⚠️ Novedad en Descargue:</strong> <span id="wa-descargue-txt"></span>
-                    </div>
-
-                    <!-- Collage de Hallazgos y Defectos con Fotos -->
-                    <div id="wa-seccion-hallazgos">
-                        <div style="font-size: 11px; font-weight: 800; color: #F87171; text-transform: uppercase; margin-bottom: 6px;">
-                            ⚠️ Hallazgos y Parámetros con Afectación:
-                        </div>
-                        <div id="wa-lista-hallazgos" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                    </div>
-
-                    <!-- Parámetros Óptimos -->
-                    <div id="wa-seccion-optimos" style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed #374151;">
-                        <div style="font-size: 10.5px; color: #4ADE80; font-weight: 700; margin-bottom: 5px;">
-                            ✓ Parámetros Conformes (100% Óptimos):
-                        </div>
-                        <div id="wa-lista-optimos" style="line-height: 1.6;"></div>
-                    </div>
-
-                    <!-- Pie de Ficha con Auditor -->
-                    <div style="margin-top: 12px; padding-top: 8px; border-top: 1.5px solid #374151; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #6B7280;">
-                        <span>📱 Sistema de Recepción y Calidad de Planta</span>
-                        <span id="wa-auditor-firma">Auditor: </span>
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin-top: 10px; font-size: 11.5px; color: #94A3B8;">
-                    📸 <em>Haz captura de pantalla a la tarjeta para compartir en WhatsApp.</em>
+                <div style="text-align: center; margin-top: 12px; font-size: 11.5px; color: #94A3B8;">
+                    📸 <em>Haz captura de pantalla a la tarjeta de arriba para compartir la imagen en WhatsApp, o usa el botón "Copiar Texto".</em>
                 </div>
             </div>
         </div>
@@ -4003,8 +3933,38 @@
                 if (subtituloEl) subtituloEl.textContent = "Pulsa en '🔍 Calificar →' sobre cualquiera de las recepciones validadas arriba para comenzar.";
                 if (contenedor) {
                     const pendientes = (historialRecepciones || []).filter(r => r.estado_flujo === "VALIDADO_DESCARGUE");
+                    const tieneFinalizadas = ultimasRecepcionesFinalizadas && ultimasRecepcionesFinalizadas.length > 0;
+                    const idsFinalizadas = tieneFinalizadas ? ultimasRecepcionesFinalizadas.map(r => r.id).filter(Boolean).join(",") : "";
+                    const fechaVal = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
+                    const semActual = String(document.getElementById("lbl-semana-calculada")?.textContent || calcularSemanaYYWW(fechaVal) || "{{ semana_actual }}").trim();
+                    const urlExcel = idsFinalizadas ? `/exportar/excel/?ids=${idsFinalizadas}` : `/exportar/excel/?semana=${semActual}`;
+
+                    let htmlBannerFinalizado = "";
+                    if (tieneFinalizadas) {
+                        htmlBannerFinalizado = `
+                            <div style="background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); border: 2px solid #10B981; border-radius: 14px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2); text-align: center; color: #FFFFFF;">
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px;">
+                                    <span style="font-size: 24px;">🎉</span>
+                                    <h3 style="font-size: 17px; font-weight: 800; color: #FFFFFF; margin: 0;">¡Calificación Finalizada y Guardada con Éxito!</h3>
+                                </div>
+                                <p style="font-size: 13px; color: #D1FAE5; margin: 4px 0 14px 0;">
+                                    Se completaron todos los productos y variedades de la recepción. Puedes abrir la ficha infográfica para captura de WhatsApp o descargar el reporte en Excel.
+                                </p>
+                                <div style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                                    <button type="button" onclick="abrirFichaResumenWhatsappMulti(ultimasRecepcionesFinalizadas)" class="btn-action" style="height: 38px; font-size: 13px; font-weight: 800; background: #25D366; color: #052E16; border-radius: 8px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.4); padding: 0 16px;">
+                                        📲 Ver Resumen WhatsApp (Captura)
+                                    </button>
+                                    <a href="${urlExcel}" class="btn-action" style="height: 38px; font-size: 13px; font-weight: 700; background: #047857; color: #FFFFFF; border: 1.5px solid #34D399; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px;" title="Exportar informe oficial en Excel">
+                                        📊 Descargar Excel (.xlsx)
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }
+
                     contenedor.innerHTML = `
-                        <div style="text-align: center; padding: 40px 20px; background: #F8FAFC; border: 2px dashed #94A3B8; border-radius: 14px; margin-bottom: 16px;">
+                        ${htmlBannerFinalizado}
+                        <div style="text-align: center; padding: 32px 20px; background: #F8FAFC; border: 2px dashed #94A3B8; border-radius: 14px; margin-bottom: 16px;">
                             <div style="font-size: 44px; margin-bottom: 12px;">📦</div>
                             <h3 style="font-size: 17px; font-weight: 800; color: #0F172A; margin-bottom: 6px;">
                                 ${pendientes.length > 0 ? 'Selecciona una Guía Validada para Calificar' : 'No Hay Guías Pendientes de Calificación'}
@@ -4244,6 +4204,7 @@
             html += `</div>`;
 
             const pmActual = (itemVar && itemVar.producto_maestro) || filtroPMPaso3 || "GENERAL";
+            const recActiva = (historialRecepciones || []).find(r => r.id === recepcionIdActual);
             const estaPMCalificado = productosMaestrosCalificados.has(pmActual);
             const todosLosPMsListos = estanTodosLosPMsCalificados();
             const pms = obtenerProductosMaestrosEnFactura();
@@ -4264,16 +4225,18 @@
                         </div>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button type="button" class="btn-action"
-                            style="background: #25D366; color: #052E16; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3);"
-                            onclick="abrirFichaResumenWhatsapp()">
-                            📲 Ficha WhatsApp
-                        </button>
-                        <button type="button" class="btn-action"
-                            style="background: #15803D; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px;"
-                            onclick="guardarYExportarExcelActual()">
-                            📊 Exportar Excel
-                        </button>
+                        ${(modoEdicionReporte && recActiva && recActiva.estado_flujo === 'COMPLETADA') ? `
+                            <button type="button" class="btn-action"
+                                style="background: #25D366; color: #052E16; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3);"
+                                onclick="abrirFichaResumenWhatsappMulti([recActiva])">
+                                📲 Ficha WhatsApp
+                            </button>
+                            <button type="button" class="btn-action"
+                                style="background: #15803D; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px;"
+                                onclick="guardarYExportarExcelActual()">
+                                📊 Exportar Excel
+                            </button>
+                        ` : ''}
                         <button type="button" class="btn-action"
                             style="background: ${estaPMCalificado ? '#15803D' : '#2563EB'}; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 18px; font-size: 13px; border-radius: 8px;"
                             onclick="validarYGuardarCalificacionPM('${pmActual}')">
@@ -4518,210 +4481,382 @@
             });
         }
 
-        function abrirFichaResumenWhatsapp(itemVarParam = null) {
-            const itemVar = itemVarParam || variedadesAgregadas[indiceVariedadPaso3];
-            if (!itemVar) {
-                mostrarToast("⚠️ No hay variedad seleccionada para generar la ficha.", true);
+        let ultimasRecepcionesFinalizadas = [];
+        let recepcionesEnFichaWhatsapp = [];
+
+        function abrirFichaResumenWhatsappMulti(recs = null) {
+            const fechaVal = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
+            const semActual = String(document.getElementById("lbl-semana-calculada")?.textContent || calcularSemanaYYWW(fechaVal) || "{{ semana_actual }}").trim();
+
+            if (recs && recs.length > 0) {
+                recepcionesEnFichaWhatsapp = recs;
+            } else if (ultimasRecepcionesFinalizadas && ultimasRecepcionesFinalizadas.length > 0) {
+                recepcionesEnFichaWhatsapp = ultimasRecepcionesFinalizadas;
+            } else {
+                const califs = (historialRecepciones || []).filter(r => r.estado_flujo === "COMPLETADA" && (!r.semana || r.semana === semActual));
+                if (califs.length > 0) {
+                    recepcionesEnFichaWhatsapp = califs;
+                } else if (recepcionIdActual) {
+                    const rAct = (historialRecepciones || []).find(r => r.id === recepcionIdActual);
+                    recepcionesEnFichaWhatsapp = rAct ? [rAct] : [];
+                } else if (historialRecepciones && historialRecepciones.length > 0) {
+                    recepcionesEnFichaWhatsapp = [historialRecepciones[0]];
+                } else {
+                    recepcionesEnFichaWhatsapp = [];
+                }
+            }
+
+            if (recepcionesEnFichaWhatsapp.length === 0) {
+                mostrarToast("⚠️ No hay recepciones calificadas para mostrar en el resumen.", true);
                 return;
             }
 
-            const m = calcularMuestreoDetallado(itemVar);
-            const cal = calcularCalificacionVariedad(itemVar);
-            const pm = itemVar.producto_maestro || filtroPMPaso3 || "GENERAL";
-            const fac = document.getElementById("input-numero-factura")?.value || "S/N";
-            const guiaCod = document.getElementById("input-codigo-guia")?.value || "REC";
-            const fec = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
-            const sem = document.getElementById("lbl-semana-calculada")?.textContent || "";
-            const auditor = document.getElementById("input-responsable")?.value || RESPONSABLE_SESION;
+            renderizarTarjetaCapturaWhatsApp(recepcionesEnFichaWhatsapp);
 
-            let fechaFmt = fec;
-            try {
-                const [y, mm, d] = fec.split("-");
-                if (d && mm && y) fechaFmt = `${d}/${mm}/${y}`;
-            } catch (e) {}
-
-            document.getElementById("wa-producto-variedad").textContent = `${pm} · ${itemVar.variedad}`;
-            document.getElementById("wa-factura-guia").textContent = `Factura(s): ${fac} · Guía: ${guiaCod}`;
-            document.getElementById("wa-fecha-auditor").textContent = `${fechaFmt} · Sem ${sem}`;
-            const auditorEl = document.getElementById("wa-auditor-firma");
-            if (auditorEl) auditorEl.textContent = `Auditor: ${auditor}`;
-
-            const badgeCal = document.getElementById("wa-badge-calidad");
-            if (badgeCal) {
-                const estadoTxt = cal.porcentaje >= 86.6 ? "ÓPTIMO" : (cal.porcentaje >= 61.6 ? "REGULAR" : "GRAVE");
-                badgeCal.textContent = `${cal.porcentaje.toFixed(1)}% · ${estadoTxt}`;
-                badgeCal.style.color = cal.porcentaje >= 86.6 ? "#4ADE80" : (cal.porcentaje >= 61.6 ? "#FCD34D" : "#F87171");
-            }
-
-            document.getElementById("wa-stat-llegaron").textContent = `${(itemVar.plantas_recibidas || 0).toLocaleString()} pl`;
-            document.getElementById("wa-stat-gavetas").textContent = `${m.resumenUnidades || `${itemVar.contenedores_recibidos} unidades`} (~${Math.round(m.plantasPorContenedor)} pl/gav)`;
-            document.getElementById("wa-stat-muestreadas").textContent = `${m.contenedoresARevisar} ${m.nombreUnidadPlural}`;
-            document.getElementById("wa-stat-pl-revisadas").textContent = `${(m.totalPlantasARevisar || 0).toLocaleString()} pl contadas`;
-
-            const alertaDesc = document.getElementById("wa-alerta-descargue");
-            const txtDesc = document.getElementById("wa-descargue-txt");
-            if (alertaDesc && txtDesc) {
-                if (tieneNovedadesDescargue || observacionesDescargue) {
-                    alertaDesc.style.display = "block";
-                    txtDesc.textContent = observacionesDescargue || "Discrepancias en bultos o daños físicos reportados.";
+            // Actualizar enlace de descarga Excel en el modal
+            const btnExcel = document.getElementById("btn-modal-excel-dl");
+            if (btnExcel) {
+                const ids = recepcionesEnFichaWhatsapp.map(r => r.id).filter(Boolean).join(",");
+                if (ids) {
+                    btnExcel.href = `/exportar/excel/?ids=${ids}`;
                 } else {
-                    alertaDesc.style.display = "none";
+                    btnExcel.href = `/exportar/excel/?semana=${semActual}`;
                 }
             }
-
-            const contenedorHallazgos = document.getElementById("wa-lista-hallazgos");
-            const seccionHallazgos = document.getElementById("wa-seccion-hallazgos");
-            const listaOptimos = document.getElementById("wa-lista-optimos");
-
-            let htmlHallazgos = "";
-            let itemsOptimos = [];
-
-            PARAMETROS_CALIDAD.forEach(p => {
-                const st = itemVar.parametros[p.codigo] || { puntaje: 3, plantas_afectadas: 0, observacion: "", foto_url: "" };
-                const pl = parseInt(st.plantas_afectadas, 10) || 0;
-                const pts = parseInt(st.puntaje, 10) || 3;
-                const tot = m.totalPlantasARevisar || 1;
-                const pct = pl > 0 ? ((pl / tot) * 100).toFixed(1) : "0.0";
-                const tieneDefecto = pl > 0 || pts < 3 || Boolean(st.foto_url) || Boolean(st.observacion);
-
-                if (tieneDefecto) {
-                    const badgeNivel = pts === 1
-                        ? '<span style="background: #991B1B; color: #FECACA; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 5px;">1 · GRAVE</span>'
-                        : (pts === 2
-                            ? '<span style="background: #92400E; color: #FDE68A; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 5px;">2 · REGULAR</span>'
-                            : '<span style="background: #14532D; color: #BBF7D0; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 5px;">3 · LEVE</span>');
-
-                    let pctBadgeStyle = 'background: #FEF3C7; color: #B45309;';
-                    if (parseFloat(pct) > 5.0) {
-                        pctBadgeStyle = 'background: #FEE2E2; color: #DC2626;';
-                    } else if (parseFloat(pct) === 0.0) {
-                        pctBadgeStyle = 'background: #F1F5F9; color: #64748B;';
-                    }
-
-                    htmlHallazgos += `
-                        <div style="background: #1E293B; border: 1.5px solid ${pts === 1 ? '#EF4444' : (pts === 2 ? '#F59E0B' : '#38BDF8')}; border-radius: 10px; padding: 12px; display: flex; gap: 12px; align-items: center;">
-                            ${st.foto_url ? `
-                                <img src="${st.foto_url}" alt="${p.nombre}" style="width: 66px; height: 66px; object-fit: cover; border-radius: 8px; border: 2px solid #38BDF8; flex-shrink: 0; cursor: pointer;" onclick="abrirFotoGrande('${st.foto_url}')" title="Toca para agrandar la foto">
-                            ` : `
-                                <div style="width: 52px; height: 52px; background: #334155; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">
-                                    ⚠️
-                                </div>
-                            `}
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                    <strong style="color: #FFFFFF; font-size: 13.5px;">${p.nombre}</strong>
-                                    <div style="display: flex; gap: 6px; align-items: center;">
-                                        <span style="${pctBadgeStyle} font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 5px;">
-                                            ${pct}% Afectación
-                                        </span>
-                                        ${badgeNivel}
-                                    </div>
-                                </div>
-                                <div style="font-size: 12px; color: ${pl > 0 ? '#FDE047' : '#94A3B8'}; margin-top: 3px;">
-                                    ${pl > 0 ? `🌱 <strong>${pl} plantas afectadas</strong> de ${tot} monitoreadas` : 'Novedad técnica evaluada por monitor'}
-                                </div>
-                                ${st.observacion ? `
-                                    <div style="font-size: 11.5px; color: #E2E8F0; margin-top: 4px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px; border-left: 3px solid #38BDF8;">
-                                        💬 <strong>Obs:</strong> "${st.observacion}"
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    itemsOptimos.push(p.nombre_corto || p.nombre);
-                }
-            });
-
-            if (htmlHallazgos) {
-                seccionHallazgos.style.display = "block";
-                contenedorHallazgos.innerHTML = htmlHallazgos;
-            } else {
-                seccionHallazgos.style.display = "none";
-                contenedorHallazgos.innerHTML = "";
-            }
-
-            listaOptimos.innerHTML = itemsOptimos.map(nom => `
-                <span style="display: inline-block; background: rgba(34, 197, 94, 0.15); color: #86EFAC; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; margin: 2px 3px 2px 0;">
-                    ✓ ${nom}
-                </span>
-            `).join("");
 
             document.getElementById("modal-ficha-whatsapp").style.display = "flex";
+        }
+
+        function abrirFichaResumenWhatsappPorGuia(guiaId) {
+            const r = (historialRecepciones || []).find(x => x.id === guiaId);
+            if (!r) return;
+            abrirFichaResumenWhatsappMulti([r]);
+        }
+
+        function abrirFichaResumenWhatsapp(itemVarParam = null) {
+            if (recepcionIdActual) {
+                abrirFichaResumenWhatsappPorGuia(recepcionIdActual);
+            } else {
+                abrirFichaResumenWhatsappMulti();
+            }
         }
 
         function cerrarFichaResumenWhatsapp() {
             document.getElementById("modal-ficha-whatsapp").style.display = "none";
         }
 
-        function copiarReporteTextoWhatsapp() {
-            const itemVar = variedadesAgregadas[indiceVariedadPaso3];
-            if (!itemVar) return;
-            const m = calcularMuestreoDetallado(itemVar);
-            const cal = calcularCalificacionVariedad(itemVar);
-            const pm = itemVar.producto_maestro || filtroPMPaso3 || "GENERAL";
-            const fac = document.getElementById("input-numero-factura")?.value || "S/N";
-            const fec = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
-            const sem = document.getElementById("lbl-semana-calculada")?.textContent || "";
-            const auditor = document.getElementById("input-responsable")?.value || RESPONSABLE_SESION;
+        function renderizarTarjetaCapturaWhatsApp(recs) {
+            const contenedor = document.getElementById("contenedor-tarjeta-captura-whatsapp");
+            if (!contenedor) return;
 
-            let txt = `🌿 *CONTROL DE CALIDAD - RECEPCIÓN DE PLANTA*\n`;
-            txt += `📅 *Fecha:* ${fec} (Sem ${sem})\n`;
-            txt += `📄 *Factura:* ${fac}\n`;
-            txt += `🌱 *Producto:* ${pm} - ${itemVar.variedad}\n`;
-            txt += `👤 *Asegurador:* ${auditor}\n\n`;
+            let totalPlantas = 0;
+            let totalContenedores = 0;
+            let totalMuestreadas = 0;
+            let totalContMuestreados = 0;
+            let sumaPonderada = 0;
 
-            txt += `📊 *MUESTREO Y RECEPCIÓN:*\n`;
-            txt += `• *Plantas recibidas:* ${(itemVar.plantas_recibidas || 0).toLocaleString()} pl en ${m.resumenUnidades || `${itemVar.contenedores_recibidos} unidades`} (~${Math.round(m.plantasPorContenedor)} pl/${m.nombreUnidadSingular})\n`;
-            txt += `• *Muestreo 10%:*\n`;
-            txt += `  - Monitoreadas: ${m.contenedoresARevisar} ${m.nombreUnidadPlural}\n`;
-            txt += `  - Total plantas evaluadas: ${(m.totalPlantasARevisar || 0).toLocaleString()} pl (${m.contenedoresARevisar} ${m.nombreUnidadPlural.toLowerCase()} × ${Math.round(m.plantasPorContenedor)} pl)\n`;
-            txt += `• *Calificación Global:* ${cal.porcentaje.toFixed(1)}% (${cal.porcentaje >= 86.6 ? 'ÓPTIMO' : (cal.porcentaje >= 61.6 ? 'REGULAR' : 'GRAVE')})\n\n`;
+            const facsSet = new Set();
+            let auditor = "";
+            let descargador = "";
+            let fechaRecepcion = "";
+            let semanaGuia = "";
 
-            if (tieneNovedadesDescargue || observacionesDescargue) {
-                txt += `⚠️ *NOVEDADES DE DESCARGUE (Furgón):*\n${observacionesDescargue || 'Novedades reportadas en transporte/descargue'}\n\n`;
-            }
+            recs.forEach(r => {
+                const pl = r.total_plantas_recibidas || 0;
+                const cont = r.total_contenedores_recibidos || 0;
+                const plM = r.total_plantas_muestreadas || 0;
+                const contM = r.total_contenedores_muestreados || 0;
+                const pct = typeof r.porcentaje_calidad_maestro === "number" ? r.porcentaje_calidad_maestro : 100;
 
-            const hallazgos = [];
-            const conformes = [];
+                totalPlantas += pl;
+                totalContenedores += cont;
+                totalMuestreadas += plM;
+                totalContMuestreados += contM;
+                sumaPonderada += (pct * pl);
 
-            PARAMETROS_CALIDAD.forEach(p => {
-                const st = itemVar.parametros[p.codigo] || { puntaje: 3, plantas_afectadas: 0, observacion: "" };
-                const pl = parseInt(st.plantas_afectadas, 10) || 0;
-                const pts = parseInt(st.puntaje, 10) || 3;
-                const tot = m.totalPlantasARevisar || 1;
-                const pct = pl > 0 ? ((pl / tot) * 100).toFixed(1) : "0.0";
-
-                if (pl > 0 || pts < 3 || st.foto_url || st.observacion) {
-                    const nivel = pts === 1 ? "1 · GRAVE" : (pts === 2 ? "2 · REGULAR" : "3 · LEVE");
-                    let linea = `• *${p.nombre}:* [${nivel}]`;
-                    if (pl > 0) {
-                        linea += ` ➔ *${pct}% de afectación* (${pl} de ${tot} pl)`;
-                    }
-                    if (st.observacion) {
-                        linea += `\n  ↳ _Obs monitor: "${st.observacion}"_`;
-                    }
-                    if (st.foto_url) {
-                        linea += ` 📷 (con foto de evidencia)`;
-                    }
-                    hallazgos.push(linea);
-                } else {
-                    conformes.push(p.nombre_corto || p.nombre);
-                }
+                if (r.numero_factura) facsSet.add(r.numero_factura);
+                if (r.responsable && !auditor) auditor = r.responsable;
+                if (r.responsable_descargue && !descargador) descargador = r.responsable_descargue;
+                if (r.fecha_recepcion && !fechaRecepcion) fechaRecepcion = r.fecha_recepcion;
+                if (r.semana && !semanaGuia) semanaGuia = r.semana;
             });
 
-            if (hallazgos.length > 0) {
-                txt += `⚠️ *HALLAZGOS Y AFECTACIONES:*\n${hallazgos.join('\n')}\n\n`;
-            } else {
-                txt += `✅ *HALLAZGOS:* Lote 100% conforme, sin defectos detectados.\n\n`;
+            if (!auditor) auditor = RESPONSABLE_SESION;
+            if (!descargador) descargador = auditor;
+            if (!fechaRecepcion) fechaRecepcion = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
+            if (!semanaGuia) semanaGuia = document.getElementById("lbl-semana-calculada")?.textContent || "";
+
+            const facsTexto = Array.from(facsSet).join(", ") || (document.getElementById("input-numero-factura")?.value || "S/N");
+            const calidadGlobal = totalPlantas > 0 ? (sumaPonderada / totalPlantas) : 100.0;
+            const estadoGlobal = calidadGlobal >= 86.6 ? "ÓPTIMO" : (calidadGlobal >= 61.6 ? "REGULAR" : "GRAVE");
+            const colGlobal = calidadGlobal >= 86.6 ? "#4ADE80" : (calidadGlobal >= 61.6 ? "#FCD34D" : "#F87171");
+
+            let html = `
+                <div id="tarjeta-captura-whatsapp" style="background: #0B1120; border: 2px solid #38BDF8; border-radius: 14px; padding: 16px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #FFFFFF; box-shadow: 0 4px 16px rgba(0,0,0,0.5);">
+                    <!-- Cabecera de la Ficha -->
+                    <div style="border-bottom: 2px solid #1E293B; padding-bottom: 12px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
+                            <div>
+                                <span style="background: #15803D; color: #DCFCE7; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">
+                                    🌿 CONTROL DE CALIDAD · PLANTA
+                                </span>
+                                <h2 style="font-size: 18px; font-weight: 800; color: #FFFFFF; margin: 4px 0 0; line-height: 1.2;">
+                                    REPORTE CONSOLIDADO POR PRODUCTO
+                                </h2>
+                                <div style="font-size: 12px; color: #94A3B8; margin-top: 3px;">
+                                    📄 Factura(s): <strong style="color: #38BDF8;">${facsTexto}</strong> · 📅 ${fechaRecepcion} (Semana ${semanaGuia})
+                                </div>
+                            </div>
+                            <div style="text-align: right; background: #1E293B; border: 1.5px solid ${colGlobal}; border-radius: 10px; padding: 6px 12px;">
+                                <div style="font-size: 9.5px; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Calidad Global</div>
+                                <div style="font-size: 19px; font-weight: 800; color: ${colGlobal}; line-height: 1.1;">${calidadGlobal.toFixed(1)}%</div>
+                                <div style="font-size: 10px; font-weight: 800; color: ${colGlobal};">${estadoGlobal}</div>
+                            </div>
+                        </div>
+
+                        <!-- Mini KPIs de Totales Globales -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px;">
+                            <div style="background: #111827; border-radius: 8px; padding: 6px 8px; text-align: center;">
+                                <div style="font-size: 9px; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Plantas Físicas</div>
+                                <div style="font-size: 14.5px; font-weight: 800; color: #38BDF8;">${totalPlantas.toLocaleString()} pl</div>
+                                <div style="font-size: 9.5px; color: #CBD5E1;">${totalContenedores} unidades</div>
+                            </div>
+                            <div style="background: #111827; border-radius: 8px; padding: 6px 8px; text-align: center;">
+                                <div style="font-size: 9px; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Muestreo 10% Real</div>
+                                <div style="font-size: 14.5px; font-weight: 800; color: #FCD34D;">${totalMuestreadas.toLocaleString()} pl</div>
+                                <div style="font-size: 9.5px; color: #CBD5E1;">${totalContMuestreados} paquetes eval.</div>
+                            </div>
+                            <div style="background: #111827; border-radius: 8px; padding: 6px 8px; text-align: center;">
+                                <div style="font-size: 9px; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Productos</div>
+                                <div style="font-size: 14.5px; font-weight: 800; color: #4ADE80;">${recs.length} PM(s)</div>
+                                <div style="font-size: 9.5px; color: #CBD5E1;">${recs.reduce((a, r) => a + (r.variedades ? r.variedades.length : 0), 0)} variedades</div>
+                            </div>
+                        </div>
+                    </div>
+            `;
+
+            // Iterar por cada Producto Maestro
+            recs.forEach(r => {
+                const pctPm = typeof r.porcentaje_calidad_maestro === "number" ? r.porcentaje_calidad_maestro : 100;
+                const colPm = pctPm >= 86.6 ? '#4ADE80' : (pctPm >= 61.6 ? '#FCD34D' : '#F87171');
+                const bgPm = pctPm >= 86.6 ? '#065F46' : (pctPm >= 61.6 ? '#78350F' : '#7F1D1D');
+
+                html += `
+                    <div style="background: #0F172A; border: 1.5px solid #1E293B; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+                        <!-- Cabecera de Producto Maestro -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid #334155; padding-bottom: 7px; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 16px;">🌿</span>
+                                <strong style="color: #FFFFFF; font-size: 14.5px; letter-spacing: 0.3px;">${r.producto_maestro}</strong>
+                                ${r.numero_factura ? `<span style="font-size: 11px; color: #38BDF8;">(Fac ${r.numero_factura})</span>` : ''}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="background: ${bgPm}; color: ${colPm}; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 5px;">
+                                    ${pctPm.toFixed(1)}% · ${r.estado_calidad_maestro || 'Óptimo'}
+                                </span>
+                                <span style="font-size: 11px; color: #94A3B8;">${(r.total_plantas_recibidas || 0).toLocaleString()} pl</span>
+                            </div>
+                        </div>
+
+                        ${r.tiene_novedades_descargue ? `
+                            <div style="background: rgba(245, 158, 11, 0.12); border-left: 3px solid #F59E0B; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; font-size: 11px; color: #FDE047;">
+                                <strong>⚠️ Novedad en Descargue:</strong> ${r.observaciones_descargue || 'Discrepancia en cantidades o empaque reportada.'}
+                            </div>
+                        ` : ''}
+
+                        <!-- Variedades del Producto -->
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                `;
+
+                (r.variedades || []).forEach(v => {
+                    const pctVar = typeof v.porcentaje_calidad === "number" ? v.porcentaje_calidad : 100;
+                    const colVar = pctVar >= 86.6 ? '#4ADE80' : (pctVar >= 61.6 ? '#FCD34D' : '#F87171');
+                    const tCont = (v.tipo_contenedor || "Bandejas").toLowerCase();
+
+                    // Buscar defectos en los parámetros
+                    const defectos = (v.parametros || []).filter(p => p.puntaje < 3 || (p.plantas_afectadas && p.plantas_afectadas > 0) || p.observacion || p.foto_url);
+
+                    let defectosHtml = "";
+                    if (defectos.length > 0) {
+                        defectosHtml = defectos.map(p => {
+                            const pts = parseInt(p.puntaje, 10) || 3;
+                            const plAf = parseInt(p.plantas_afectadas, 10) || 0;
+                            const totM = v.total_plantas_a_revisar || 1;
+                            const pctAf = p.porcentaje_afectacion > 0
+                                ? p.porcentaje_afectacion.toFixed(1)
+                                : (plAf > 0 ? ((plAf / totM) * 100).toFixed(1) : "0.0");
+
+                            const nivelTag = pts === 1
+                                ? '<span style="background: #991B1B; color: #FECACA; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">1 · GRAVE</span>'
+                                : (pts === 2
+                                    ? '<span style="background: #92400E; color: #FDE68A; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">2 · REGULAR</span>'
+                                    : '<span style="background: #14532D; color: #BBF7D0; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">3 · LEVE</span>');
+
+                            return `
+                                <div style="background: rgba(15, 23, 42, 0.95); border-left: 3.5px solid ${pts === 1 ? '#EF4444' : (pts === 2 ? '#F59E0B' : '#38BDF8')}; border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                            <strong style="color: #FFFFFF; font-size: 12px;">${p.nombre}</strong>
+                                            ${nivelTag}
+                                            <span style="font-size: 10.5px; font-weight: 800; color: #FCD34D;">
+                                                🌱 ${plAf} pl (${pctAf}% daño)
+                                            </span>
+                                        </div>
+                                        ${p.observacion ? `
+                                            <div style="font-size: 11px; color: #E2E8F0; margin-top: 3px; background: rgba(0,0,0,0.25); padding: 3px 6px; border-radius: 4px;">
+                                                💬 <strong>Obs:</strong> "${p.observacion}"
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    ${p.foto_url ? `
+                                        <img src="${p.foto_url}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1.5px solid #38BDF8; cursor: pointer; flex-shrink: 0;" onclick="abrirFotoGrande('${p.foto_url}')" title="Toca para agrandar la foto">
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join("");
+                    }
+
+                    html += `
+                        <div style="background: #1E293B; border: 1px solid #334155; border-radius: 8px; padding: 9px 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; flex-wrap: wrap;">
+                                <div>
+                                    <strong style="font-size: 13.5px; color: #FFFFFF;">🌱 ${v.variedad}</strong>
+                                    <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">
+                                        ${(v.plantas_recibidas || 0).toLocaleString()} pl (${v.contenedores_recibidos || 1} ${tCont}) · 
+                                        <span style="color: #FCD34D;">Muestreo 10%: ${v.contenedores_a_revisar || 1} ${tCont} (${(v.total_plantas_a_revisar || 0).toLocaleString()} pl evaluadas)</span>
+                                    </div>
+                                </div>
+                                <span style="font-size: 12px; font-weight: 800; color: ${colVar};">
+                                    ${pctVar.toFixed(1)}% (${v.estado_calidad || 'Óptimo'})
+                                </span>
+                            </div>
+
+                            ${defectos.length > 0 ? `
+                                <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">
+                                    ${defectosHtml}
+                                </div>
+                            ` : `
+                                <div style="margin-top: 6px; font-size: 11px; color: #86EFAC; display: flex; align-items: center; gap: 5px;">
+                                    <span>✅</span> <span>100% Conforme · Sin defectos fitosanitarios ni mecánicos detectados.</span>
+                                </div>
+                            `}
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Pie de Ficha con Auditor
+            html += `
+                    <div style="margin-top: 14px; padding-top: 8px; border-top: 1.5px solid #334155; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #64748B;">
+                        <span>📱 Sistema de Recepción y Aseguramiento de Calidad</span>
+                        <span>Auditor: <strong style="color: #D1D5DB;">${auditor}</strong> · Descargó: <strong style="color: #D1D5DB;">${descargador}</strong></span>
+                    </div>
+                </div>
+            `;
+
+            contenedor.innerHTML = html;
+        }
+
+        function copiarReporteTextoWhatsapp() {
+            if (!recepcionesEnFichaWhatsapp || recepcionesEnFichaWhatsapp.length === 0) {
+                mostrarToast("⚠️ No hay datos para copiar.", true);
+                return;
             }
 
-            if (conformes.length > 0) {
-                txt += `✅ *Parámetros Óptimos:* ${conformes.join(', ')}\n`;
-            }
+            const recs = recepcionesEnFichaWhatsapp;
+            let totalPlantas = 0;
+            let totalContenedores = 0;
+            let totalMuestreadas = 0;
+            let totalContMuestreados = 0;
+            let sumaPonderada = 0;
+
+            const facsSet = new Set();
+            let auditor = "";
+            let fechaRecepcion = "";
+            let semanaGuia = "";
+
+            recs.forEach(r => {
+                const pl = r.total_plantas_recibidas || 0;
+                const cont = r.total_contenedores_recibidos || 0;
+                const plM = r.total_plantas_muestreadas || 0;
+                const contM = r.total_contenedores_muestreados || 0;
+                const pct = typeof r.porcentaje_calidad_maestro === "number" ? r.porcentaje_calidad_maestro : 100;
+
+                totalPlantas += pl;
+                totalContenedores += cont;
+                totalMuestreadas += plM;
+                totalContMuestreados += contM;
+                sumaPonderada += (pct * pl);
+
+                if (r.numero_factura) facsSet.add(r.numero_factura);
+                if (r.responsable && !auditor) auditor = r.responsable;
+                if (r.fecha_recepcion && !fechaRecepcion) fechaRecepcion = r.fecha_recepcion;
+                if (r.semana && !semanaGuia) semanaGuia = r.semana;
+            });
+
+            if (!auditor) auditor = RESPONSABLE_SESION;
+            if (!fechaRecepcion) fechaRecepcion = document.getElementById("input-fecha")?.value || FECHA_HOY_ISO;
+            if (!semanaGuia) semanaGuia = document.getElementById("lbl-semana-calculada")?.textContent || "";
+
+            const facsTexto = Array.from(facsSet).join(", ") || (document.getElementById("input-numero-factura")?.value || "S/N");
+            const calidadGlobal = totalPlantas > 0 ? (sumaPonderada / totalPlantas) : 100.0;
+            const estadoGlobal = calidadGlobal >= 86.6 ? "ÓPTIMO" : (calidadGlobal >= 61.6 ? "REGULAR" : "GRAVE");
+
+            let txt = `🌿 *CONTROL DE CALIDAD - RECEPCIÓN DE PLANTA*\n`;
+            txt += `📅 *Fecha:* ${fechaRecepcion} (Semana ${semanaGuia})\n`;
+            txt += `📄 *Factura(s):* ${facsTexto}\n`;
+            txt += `👤 *Asegurador:* ${auditor}\n`;
+            txt += `🎯 *CALIFICACIÓN GLOBAL:* ${calidadGlobal.toFixed(1)}% (${estadoGlobal})\n`;
+            txt += `📊 *TOTALES:* ${totalPlantas.toLocaleString()} pl recibidas · ${totalContenedores} unidades\n`;
+            txt += `🔍 *Muestreo 10%:* ${totalContMuestreados} paquetes / ${totalMuestreadas.toLocaleString()} pl evaluadas al 100%\n`;
+            txt += `========================================\n`;
+
+            recs.forEach(r => {
+                const pctPm = typeof r.porcentaje_calidad_maestro === "number" ? r.porcentaje_calidad_maestro : 100;
+                txt += `\n🌿 *${r.producto_maestro}* · Calidad: ${pctPm.toFixed(1)}% (${r.estado_calidad_maestro || 'Óptimo'})\n`;
+                txt += `Total recibido: ${(r.total_plantas_recibidas || 0).toLocaleString()} pl (${r.total_contenedores_recibidos || 0} u.)\n`;
+
+                if (r.tiene_novedades_descargue && r.observaciones_descargue) {
+                    txt += `⚠️ *Novedad en Descargue:* ${r.observaciones_descargue}\n`;
+                }
+
+                (r.variedades || []).forEach(v => {
+                    const pctV = typeof v.porcentaje_calidad === "number" ? v.porcentaje_calidad : 100;
+                    const tCont = (v.tipo_contenedor || "Bandejas").toLowerCase();
+
+                    txt += `\n• *${v.variedad}:* ${(v.plantas_recibidas || 0).toLocaleString()} pl (${v.contenedores_recibidos || 1} ${tCont})\n`;
+                    txt += `  Muestreo 10%: ${v.contenedores_a_revisar || 1} ${tCont} (${(v.total_plantas_a_revisar || 0).toLocaleString()} pl) · Calidad: ${pctV.toFixed(1)}%\n`;
+
+                    const defectos = (v.parametros || []).filter(p => p.puntaje < 3 || (p.plantas_afectadas && p.plantas_afectadas > 0) || p.observacion || p.foto_url);
+                    if (defectos.length > 0) {
+                        txt += `  ⚠️ *Daño de planta y afectaciones:*\n`;
+                        defectos.forEach(p => {
+                            const nivel = p.puntaje === 1 ? "1 · GRAVE" : (p.puntaje === 2 ? "2 · REGULAR" : "3 · LEVE");
+                            const plAf = parseInt(p.plantas_afectadas, 10) || 0;
+                            const totM = v.total_plantas_a_revisar || 1;
+                            const pctAf = p.porcentaje_afectacion > 0
+                                ? `${p.porcentaje_afectacion.toFixed(1)}%`
+                                : (plAf > 0 ? ((plAf / totM) * 100).toFixed(1) + "%" : "0.0%");
+                            txt += `  - *${p.nombre}:* [${nivel}] ➔ ${plAf} pl (${pctAf} daño)\n`;
+                            if (p.observacion) txt += `    ↳ _Obs: "${p.observacion}"_\n`;
+                            if (p.foto_url) txt += `    📷 _(Foto de evidencia registrada)_\n`;
+                        });
+                    } else {
+                        txt += `  ✅ _100% Conforme, sin defectos detectados._\n`;
+                    }
+                });
+                txt += `----------------------------------------\n`;
+            });
+
+            txt += `\n📱 _Reporte generado por Sistema de Calidad de Planta_`;
 
             navigator.clipboard.writeText(txt).then(() => {
-                mostrarToast("📋 ¡Reporte para WhatsApp copiado al portapapeles!");
+                mostrarToast("📋 ¡Reporte consolidado para WhatsApp copiado al portapapeles!");
             }).catch(() => {
                 mostrarToast("⚠️ Copia manualmente el texto mostrado.", true);
             });
@@ -4730,7 +4865,7 @@
         async function abrirFichaWhatsappDesdeHistorial(id) {
             cerrarModalDetalle();
             await cargarRecepcionParaEditar(id, 4);
-            abrirFichaResumenWhatsapp();
+            abrirFichaResumenWhatsappPorGuia(id);
         }
 
         function deseleccionarGuiaParaAuditar() {
@@ -4804,6 +4939,10 @@
             }
 
             if (filtrosCont) {
+                const tieneCalificadas = calificadas.length > 0;
+                const idsCalificadas = calificadas.map(r => r.id).filter(Boolean).join(",");
+                const urlExcel = idsCalificadas ? `/exportar/excel/?ids=${idsCalificadas}` : `/exportar/excel/?semana=${semActual}`;
+
                 filtrosCont.innerHTML = `
                     <button type="button" onclick="cambiarFiltroBannerEstado('TODAS')"
                         style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; border: 1px solid ${filtroBannerEstado === 'TODAS' ? '#38BDF8' : '#475569'}; background: ${filtroBannerEstado === 'TODAS' ? '#0284C7' : '#1E293B'}; color: #FFFFFF; cursor: pointer;">
@@ -4817,6 +4956,18 @@
                         style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; border: 1px solid ${filtroBannerEstado === 'CALIFICADAS' ? '#10B981' : '#475569'}; background: ${filtroBannerEstado === 'CALIFICADAS' ? '#065F46' : '#1E293B'}; color: #FFFFFF; cursor: pointer;">
                         ✅ Calificadas (${calificadas.length})
                     </button>
+                    ${tieneCalificadas ? `
+                        <button type="button" onclick="abrirFichaResumenWhatsappMulti()"
+                            style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 800; border-radius: 6px; border: 1px solid #10B981; background: #25D366; color: #052E16; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                            title="Ver resumen consolidado para WhatsApp">
+                            📲 WhatsApp
+                        </button>
+                        <a href="${urlExcel}"
+                            style="height: 28px; padding: 0 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; border: 1px solid #059669; background: #15803D; color: #FFFFFF; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"
+                            title="Descargar reporte en Excel (.xlsx) de las recepciones calificadas">
+                            📊 Excel (.xlsx)
+                        </a>
+                    ` : ''}
                     ${recepcionIdActual ? `
                         <button type="button" onclick="deseleccionarGuiaParaAuditar()"
                             style="height: 28px; padding: 0 10px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid #EF4444; background: #7F1D1D; color: #FCA5A5; cursor: pointer;"
@@ -4885,6 +5036,14 @@
                             ${r.tiene_novedades_descargue ? `<div style="font-size: 11px; color: #FCD34D; font-weight: 700; margin-top: 2px;">⚠️ Novedades de camión registradas</div>` : ''}
                         </div>
                         <div style="display: flex; gap: 6px; align-items: center;">
+                            ${esCalificada ? `
+                                <button type="button" class="btn-action"
+                                    style="background: #25D366; color: #052E16; font-size: 11px; font-weight: 800; height: 36px; padding: 0 10px; border-radius: 8px; white-space: nowrap; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);"
+                                    onclick="event.stopPropagation(); abrirFichaResumenWhatsappPorGuia(${r.id})"
+                                    title="Ver resumen WhatsApp de esta recepción">
+                                    📲 WhatsApp
+                                </button>
+                            ` : ''}
                             <button type="button" class="btn-action"
                                 style="background: ${esActiva ? '#34D399' : (esCalificada ? '#1E293B' : '#22C55E')}; color: ${esActiva ? '#064E3B' : (esCalificada ? '#6EE7B7' : '#052E16')}; border: ${esCalificada ? '1.5px solid #059669' : 'none'}; font-size: 12px; font-weight: 800; height: 36px; padding: 0 13px; border-radius: 8px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.25);"
                                 onclick="cargarRecepcionParaEditar(${r.id}, 4)">
@@ -5155,9 +5314,12 @@
                     return;
                 }
 
-                (data.recepciones || [data.recepcion]).forEach(r => actualizarOInsertarEnHistorialLocal(r));
+                const recsGuardadas = data.recepciones || [data.recepcion];
+                ultimasRecepcionesFinalizadas = recsGuardadas;
+                recsGuardadas.forEach(r => actualizarOInsertarEnHistorialLocal(r));
                 mostrarToast(`✅ ${data.mensaje}`);
                 reiniciarFormularioEnBlanco(data.siguiente_guia);
+                abrirFichaResumenWhatsappMulti(recsGuardadas);
             } catch (e) {
                 encolarRecepcionOffline(payload);
                 mostrarToast("📡 Recepción finalizada en el teléfono (Offline).");
