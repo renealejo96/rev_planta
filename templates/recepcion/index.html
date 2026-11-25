@@ -1550,41 +1550,6 @@
 
                         <div id="tabs-variedades-paso3" class="variety-tabs-strip"></div>
                         <div id="contenedor-parametros-paso3"></div>
-
-                        <!-- APARTADO FINAL DEL PASO 4: ACCIONES RÁPIDAS (FICHA WHATSAPP Y EXPORTACIÓN A EXCEL) -->
-                        <div style="margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
-                            <!-- 1. Generar Ficha WhatsApp / Collage -->
-                            <div style="background: #0F172A; border: 1.5px solid #38BDF8; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
-                                <div>
-                                    <span class="step-tag" style="background: #25D366; color: #052E16; font-weight: 800;">WhatsApp & Collage</span>
-                                    <h3 style="font-size: 15px; font-weight: 800; color: #FFFFFF; margin-top: 4px;">📲 Ficha Resumen para WhatsApp</h3>
-                                    <p style="font-size: 12px; color: #94A3B8; margin-top: 3px;">
-                                        Genera una captura limpia con el collage de fotos, gravedad (1, 2, 3), % de afectación y observaciones para compartir al grupo técnico.
-                                    </p>
-                                </div>
-                                <div style="margin-top: 12px;">
-                                    <button type="button" class="btn-action" style="background: #25D366; color: #052E16; font-weight: 800; height: 42px; font-size: 13px; width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.35);" onclick="abrirFichaResumenWhatsapp()">
-                                        📲 Ver Ficha y Collage para WhatsApp
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- 2. Exportar Resumen de Calificaciones y Observaciones a Excel (.xlsx) -->
-                            <div style="background: #F0FDF4; border: 1.5px solid #86EFAC; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
-                                <div>
-                                    <span class="step-tag" style="background: #15803D;">Reporte Excel (.xlsx)</span>
-                                    <h3 style="font-size: 15px; font-weight: 800; color: #065F46; margin-top: 4px;">📊 Exportar Resumen a Excel</h3>
-                                    <p style="font-size: 12px; color: #166534; margin-top: 3px;">
-                                        Descarga en Excel (.xlsx) el consolidado con los puntajes (1 a 3), muestreo 10%, plantas afectadas y todas las notas técnicas.
-                                    </p>
-                                </div>
-                                <div style="margin-top: 12px;">
-                                    <button type="button" class="btn-action" style="background: #15803D; height: 42px; font-size: 13px; width: 100%; border-radius: 8px;" onclick="guardarYExportarExcelActual()">
-                                        📥 Guardar y Exportar esta Recepción (.xlsx)
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -4181,7 +4146,12 @@
                         <button type="button" class="btn-action"
                             style="background: #25D366; color: #052E16; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3);"
                             onclick="abrirFichaResumenWhatsapp()">
-                            📲 Ficha / Collage WhatsApp
+                            📲 Ficha WhatsApp
+                        </button>
+                        <button type="button" class="btn-action"
+                            style="background: #15803D; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px;"
+                            onclick="guardarYExportarExcelActual()">
+                            📊 Exportar Excel
                         </button>
                         <button type="button" class="btn-action"
                             style="background: ${estaPMCalificado ? '#15803D' : '#2563EB'}; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 18px; font-size: 13px; border-radius: 8px;"
