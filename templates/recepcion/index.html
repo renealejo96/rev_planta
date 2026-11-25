@@ -141,29 +141,37 @@
         .nav-tabs {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
             flex-wrap: wrap;
+            margin-top: 6px;
         }
 
         .nav-tab {
             background: rgba(255, 255, 255, 0.08);
             color: #D1FAE5;
-            border: 1px solid transparent;
-            padding: 7px 11px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 7px 12px;
             border-radius: var(--radius-sm);
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
+            transition: all 0.15s ease;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255, 255, 255, 0.16);
+            color: #FFFFFF;
         }
 
         .nav-tab.active {
             background: #15803D;
             color: #FFFFFF;
-            border-color: #22C55E;
+            border-color: #34D399;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
         }
 
         .container {
@@ -1302,11 +1310,21 @@
                 </div>
             </div>
             <nav class="nav-tabs">
-                <button type="button" class="nav-tab active" id="tab-recepcion" onclick="cambiarVista('recepcion')">
-                    Recepción
+                {% if rol_usuario != "CALIDAD" %}
+                <button type="button" class="nav-tab active" id="tab-facturas" onclick="cambiarVista('facturas')">
+                    📄 Cargar Facturas
                 </button>
+                <button type="button" class="nav-tab" id="tab-descargue" onclick="cambiarVista('descargue')">
+                    📦 Descargue Físico (<span id="badge-total-descargue" class="tabular">0</span>)
+                </button>
+                {% endif %}
+                {% if rol_usuario != "DESCARGUE" %}
+                <button type="button" class="nav-tab {% if rol_usuario == 'CALIDAD' %}active{% endif %}" id="tab-calidad" onclick="cambiarVista('calidad')">
+                    🌿 Calidad de Planta (<span id="badge-total-calidad" class="tabular">0</span>)
+                </button>
+                {% endif %}
                 <button type="button" class="nav-tab" id="tab-historial" onclick="cambiarVista('historial')">
-                    Reportes y Resumen (<span id="badge-total-guias" class="tabular">{{ total_guias }}</span>)
+                    📊 Reportes y Resumen (<span id="badge-total-guias" class="tabular">{{ total_guias }}</span>)
                 </button>
                 {% if es_admin %}
                 <button type="button" class="nav-tab" id="tab-admin" onclick="cambiarVista('admin')">
@@ -1338,10 +1356,210 @@
         <!-- ===================================================================== -->
         <!-- VISTA 1: FLUJO DIRECTO DE 3 PASOS (1. GUÍA -> 2. CONTEO -> 3. CALIFICAR) -->
         <!-- ===================================================================== -->
-        <section id="vista-recepcion" class="view-panel active">
+        <!-- ===================================================================== -->
+        <!-- VISTA 1: CARGA DE FACTURAS (PANTALLA LIMPIA PARA ESCANEAR DÍA TRAS DÍA)-->
+        <!-- ===================================================================== -->
+        <section id="vista-facturas" class="view-panel {% if rol_usuario != 'CALIDAD' %}active{% endif %}">
+            <div id="step-panel-1" class="wizard-step active">
+                <div class="card" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 14px; overflow: hidden; margin-bottom: 16px;">
+                    <div class="card-header" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #FFFFFF; padding: 18px 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <span class="step-tag" style="background: #0284C7; color: #FFFFFF; font-weight: 800; font-size: 11px;">
+                                    📄 Módulo de Ingreso · Carga Inteligente de Facturas
+                                </span>
+                                <h2 class="card-title" style="color: #FFFFFF; font-size: 19px; margin-top: 4px;">
+                                    Cargar Facturas o Guías Físicas
+                                </h2>
+                                <p class="card-subtitle" style="color: #94A3B8; font-size: 13px; margin-top: 3px;">
+                                    Fotografía o sube las facturas que van llegando día tras día. La IA detectará automáticamente variedades y cantidades para dejarlas listas para descargue.
+                                </p>
+                            </div>
+                            <label id="btn-label-escanear-factura" class="btn-action" style="background: #22C55E; color: #052E16; cursor: pointer; height: 48px; padding: 0 20px; font-size: 14px; font-weight: 800; border-radius: 10px; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35); display: inline-flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 20px;">📷</span>
+                                <span>Tomar Foto / Cargar Factura(s)</span>
+                                <input type="file" id="input-foto-guia-manuscrita" accept="image/*" multiple style="display: none;" onchange="procesarFotoGuiaManuscrita(this)">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding: 18px 20px;">
+                        <div class="form-stack">
+                            <!-- MEDIDOR DE PROGRESO DEL ESCANEO -->
+                            <div id="contenedor-progreso-ocr" style="display: none; background: rgba(15, 23, 42, 0.95); border: 1.5px solid #38BDF8; border-radius: 12px; padding: 14px 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span id="texto-etapa-ocr" style="font-size: 13px; font-weight: 700; color: #38BDF8;">
+                                        ⏳ Leyendo factura física con IA...
+                                    </span>
+                                    <span id="porcentaje-progreso-ocr" class="tabular" style="font-size: 13.5px; font-weight: 800; color: #4ADE80;">0%</span>
+                                </div>
+                                <div style="width: 100%; height: 10px; background: #1E293B; border-radius: 999px; overflow: hidden; border: 1px solid #475569;">
+                                    <div id="barra-progreso-ocr" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38BDF8 0%, #22C55E 100%); transition: width 0.35s ease;"></div>
+                                </div>
+                                <div id="box-reintentar-ocr" style="display: none; margin-top: 10px; text-align: center;">
+                                    <button type="button" onclick="reintentarUltimoEscaneo()" style="background: #2563EB; color: #FFFFFF; font-weight: 800; font-size: 13px; border: none; border-radius: 6px; padding: 8px 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(37,99,235,0.5);">
+                                        🔄 Reintentar Lectura con IA (Sin volver a tomar foto)
+                                    </button>
+                                </div>
+                            </div>
 
-            <!-- Banner de Guías Validadas y Calificadas de la Semana (Visibles para Asegurador de Calidad) -->
-            <div id="banner-guias-validadas-descargue" style="display: none; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 1.5px solid #38BDF8; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; color: #FFFFFF; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);">
+                            <div id="panel-preview-guia-manuscrita" style="display: none; background: #0F172A; border-radius: 12px; padding: 14px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span id="estado-ocr-guia" style="font-size: 12.5px; font-weight: 700; color: #86EFAC;">📷 Fotos cargadas en esta sesión:</span>
+                                    <button type="button" class="btn-remove" style="height: 28px; font-size: 11px; padding: 0 10px;" onclick="descartarYLimpiarFacturas(true)">✕ Limpiar Fotos</button>
+                                </div>
+                                <div id="galeria-previews-paso1" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                                <img id="img-preview-guia-manuscrita" src="" alt="Guía Física" style="display: none;">
+                            </div>
+
+                            <!-- Campos Ocultos de Registro -->
+                            <input type="hidden" id="input-numero-factura" value="">
+                            <input type="hidden" id="input-codigo-guia" value="{{ siguiente_guia }}">
+                            <input type="hidden" id="input-producto-maestro" value="">
+                            <input type="hidden" id="input-fecha-factura" value="">
+                            <input type="hidden" id="input-fecha" value="{{ fecha_hoy_iso }}">
+                            <input type="hidden" id="input-responsable" value="{{ responsable_actual }}">
+                            <span id="lbl-semana-calculada" style="display: none;">{{ semana_actual }}</span>
+
+                            <!-- Listado Limpio de Facturas Cargadas en la Semana -->
+                            <div style="margin-top: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 8px;">
+                                    <div>
+                                        <h3 style="font-size: 15.5px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: gap: 6px;">
+                                            <span>📋</span> Facturas Registradas en el Sistema (Semana {{ semana_actual }})
+                                        </h3>
+                                        <p style="font-size: 12px; color: #64748B; margin: 2px 0 0;">
+                                            Facturas disponibles para el conteo físico en descargue.
+                                        </p>
+                                    </div>
+                                    <button type="button" onclick="cambiarVista('descargue')" class="btn-action" style="background: #0284C7; color: #FFFFFF; font-size: 12px; font-weight: 700; height: 34px; padding: 0 14px; border-radius: 6px;">
+                                        📦 Pasar a Descargue Físico →
+                                    </button>
+                                </div>
+                                <div id="contenedor-lista-facturas-semana"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VISTA 2: DESCARGUE FÍSICO (SELECTOR POR N° FACTURA + CONTEO FURGÓN)  -->
+        <!-- ===================================================================== -->
+        <section id="vista-descargue" class="view-panel">
+            <div class="card" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 14px; overflow: hidden; margin-bottom: 16px;">
+                <div class="card-header" style="background: #112218; color: #FFFFFF; padding: 16px 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <span class="step-tag" style="background: #15803D; color: #DCFCE7; font-weight: 800; font-size: 11px;">
+                                📦 Módulo de Descargue · Personal de Furgón
+                            </span>
+                            <h2 class="card-title" style="color: #FFFFFF; font-size: 18px; margin-top: 4px;">
+                                Conteo Físico de Descargue y Novedades de Camión
+                            </h2>
+                            <p class="card-subtitle" style="color: #A7F3D0; font-size: 12.5px; margin-top: 2px;">
+                                Selecciona el número de factura para verificar las cantidades reales que bajan del camión (Gavetas vs Bandejas).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Selección de Facturas Cargadas -->
+                <div style="background: #F8FAFC; border-bottom: 1.5px solid #E2E8F0; padding: 14px 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+                            <label for="sel-factura-descargue" style="font-size: 13px; font-weight: 800; color: #334155; white-space: nowrap;">
+                                📄 Factura a Descargar:
+                            </label>
+                            <select id="sel-factura-descargue" class="field-select" style="font-weight: 800; font-size: 13.5px; height: 42px; border: 2px solid #0284C7; background: #FFFFFF; border-radius: 8px;" onchange="seleccionarFacturaParaDescargue(this.value)">
+                            </select>
+                        </div>
+                        <div id="pills-facturas-descargue" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
+                    </div>
+                </div>
+
+                <div class="card-body" id="cuerpo-modulo-descargue" style="padding: 20px;">
+                    <div id="box-alerta-sin-factura-descargue" style="display: none; text-align: center; padding: 36px 20px; background: #F8FAFC; border: 2px dashed #CBD5E1; border-radius: 14px;">
+                        <div style="font-size: 40px; margin-bottom: 10px;">📄</div>
+                        <h3 style="font-size: 16.5px; font-weight: 800; color: #0F172A; margin-bottom: 6px;">No hay facturas pendientes de descargue</h3>
+                        <p style="font-size: 13px; color: #64748B; max-width: 500px; margin: 0 auto 16px auto;">
+                            Toma fotos de las facturas en la pestaña <strong>"📄 Cargar Facturas"</strong> para que aparezcan aquí para el conteo de furgón.
+                        </p>
+                        <button type="button" onclick="cambiarVista('facturas')" class="btn-action" style="background: #22C55E; color: #052E16; font-weight: 800; height: 38px; padding: 0 16px;">
+                            📷 Ir a Cargar Facturas →
+                        </button>
+                    </div>
+
+                    <!-- Panel activo de Descargue -->
+                    <div id="panel-activo-descargue">
+                        <!-- Subtabs para Variedades o Conteo Físico -->
+                        <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" id="btn-subtab-descargue-conteo" class="btn-action" style="background: #112218; color: #FFFFFF; font-weight: 800; font-size: 13px; height: 36px; padding: 0 14px;" onclick="irAPaso(3)">
+                                    📦 Conteo Físico en Furgón
+                                </button>
+                                <button type="button" id="btn-subtab-descargue-vars" class="btn-action" style="background: #F1F5F9; color: #334155; font-weight: 700; font-size: 13px; height: 36px; padding: 0 14px;" onclick="irAPaso(2)">
+                                    🌱 Variedades y Catálogo (+)
+                                </button>
+                            </div>
+                            <label class="btn-action" style="background: #16A34A; color: #FFFFFF; cursor: pointer; height: 36px; padding: 0 12px; font-size: 12px; font-weight: 800; border-radius: 8px;">
+                                📷 + Sumar Foto Adicional
+                                <input type="file" id="input-foto-guia-adicional-paso2" accept="image/*" multiple style="display: none;" onchange="procesarFotoGuiaManuscrita(this)">
+                            </label>
+                        </div>
+
+                        <!-- PASO 2: VARIEDADES -->
+                        <div id="step-panel-2" class="wizard-step" style="display: none;">
+                            <div id="contenedor-progreso-ocr-paso2" style="display: none; margin-bottom: 12px; background: #0F172A; border: 1.5px solid #38BDF8; border-radius: 10px; padding: 10px 14px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <span id="texto-etapa-ocr-paso2" style="font-size: 12.5px; font-weight: 700; color: #38BDF8;">⏳ Procesando factura adicional...</span>
+                                    <span id="porcentaje-progreso-ocr-paso2" class="tabular" style="font-size: 13px; font-weight: 800; color: #4ADE80;">0%</span>
+                                </div>
+                                <div style="width: 100%; height: 9px; background: #1E293B; border-radius: 999px; overflow: hidden;">
+                                    <div id="barra-progreso-ocr-paso2" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38BDF8 0%, #22C55E 100%); transition: width 0.35s ease;"></div>
+                                </div>
+                            </div>
+                            <div id="visor-foto-guia-paso2" style="display: none; background: #0F172A; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
+                                <div id="galeria-fotos-facturas-paso2" style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;"></div>
+                            </div>
+                            <div id="resumen-escaneo-paso2" style="display: none; padding: 10px 14px; border-radius: 10px; font-size: 12.5px; margin-bottom: 12px;"></div>
+                            <div class="slicer-bar" style="margin-bottom: 14px;">
+                                <label class="field-label" for="slicer-variedad">
+                                    <span>Agregar otra Variedad manualmente (se asigna sola a su Producto Maestro)</span>
+                                    <span id="lbl-disponibles-count" class="tabular">Catálogo completo</span>
+                                </label>
+                                <div class="slicer-controls">
+                                    <select id="slicer-variedad" class="field-select">
+                                        <option value="">— Elige una variedad —</option>
+                                    </select>
+                                    <button type="button" class="btn-action" onclick="agregarVariedadDesdeSlicer()">
+                                        + Agregar Variedad
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="lista-variedades-agregadas" class="variedades-grid-responsive"></div>
+                            <div style="margin-top: 14px; text-align: right;">
+                                <button type="button" class="btn-action" style="background: #0284C7; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 18px;" onclick="irAPaso(3)">
+                                    Continuar al Conteo Físico (Paso 3) →
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- PASO 3: CONTEO FÍSICO Y NOVEDADES -->
+                        <div id="step-panel-3" class="wizard-step active" style="display: block;">
+                            <div id="contenedor-consolidado-paso3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- VISTA 3: CALIDAD DE PLANTA (RECEPCIONES VALIDADAS + MUESTREO 10% + 1-3) -->
+        <!-- ===================================================================== -->
+        <section id="vista-calidad" class="view-panel {% if rol_usuario == 'CALIDAD' %}active{% endif %}">
+            <!-- Banner de Monitoreo Semanal de Guías Validadas y Calificadas -->
+            <div id="banner-guias-validadas-descargue" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 1.5px solid #38BDF8; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; color: #FFFFFF; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -1351,10 +1569,10 @@
                             <span id="badge-conteo-pendientes-calidad" style="font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;"></span>
                         </div>
                         <div style="font-size: 15.5px; font-weight: 800; color: #FFFFFF; margin-top: 4px;">
-                            📦 Monitoreo de Recepciones Semanales (Descargue y Calidad)
+                            🌿 Monitoreo de Recepciones para Auditoría de Calidad
                         </div>
                         <div style="font-size: 12px; color: #CBD5E1; margin-top: 2px;">
-                            Las recepciones se mantienen aquí durante la semana. Califica los productos pendientes o revisa/modifica los calificados:
+                            Facturas validadas por descargue listas para inspección del 10%. Pulsa "🔍 Calificar →" para comenzar:
                         </div>
                     </div>
                     <div id="filtros-banner-calidad" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
@@ -1362,252 +1580,22 @@
                 <div id="lista-pills-guias-validadas" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;"></div>
             </div>
 
-            <div class="stepper-bar">
-                <div class="step-pill active" id="pill-step-1" onclick="irAPaso(1)">
-                    <span class="s-num">1</span>
-                    <span>1. Cargar Factura</span>
-                </div>
-                <div class="step-pill" id="pill-step-2" onclick="irAPaso(2)">
-                    <span class="s-num">2</span>
-                    <span>2. Variedades</span>
-                </div>
-                <div class="step-pill" id="pill-step-3" onclick="irAPaso(3)">
-                    <span class="s-num">3</span>
-                    <span>3. Consolidado</span>
-                </div>
-                <div class="step-pill" id="pill-step-4" onclick="irAPaso(4)">
-                    <span class="s-num">4</span>
-                    <span>{% if rol_usuario == "DESCARGUE" %}4. Calidad 🔒{% else %}4. Calificar{% endif %}</span>
-                </div>
-            </div>
-
-            <!-- PASO 1: ESCANEAR FACTURA / GUÍA FÍSICA -->
-            <div id="step-panel-1" class="wizard-step active">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="step-tag">Paso 1 de 4 · Ingreso de Factura / Guía</span>
-                        <h2 class="card-title">Cargar Factura o Guía Física</h2>
-                        <p class="card-subtitle">Fotografía o sube la guía física escrita a mano. El sistema detectará automáticamente el N° de Factura, asignará cada variedad a su Producto Maestro y cargará la columna Cantidad de plantas.</p>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-stack">
-                            <!-- Escáner Principal de Factura / Guía Física con Medidor de Progreso -->
-                            <div style="background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); color: #FFFFFF; border: 1.5px solid #334155; border-radius: 14px; padding: 18px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                                    <div>
-                                        <span style="display: inline-block; background: #0284C7; color: #FFFFFF; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 5px; text-transform: uppercase; margin-bottom: 5px;">
-                                            Lectura Inteligente IA (Esfero / Impreso)
-                                        </span>
-                                        <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 17px; font-weight: 800; color: #FFFFFF;">
-                                            📷 Escanear Factura / Guía Física
-                                        </div>
-                                        <div style="font-size: 12.5px; color: #CBD5E1; margin-top: 2px;">
-                                            Puedes cargar <strong>1, 2, 3 o 4 facturas</strong> seguidas (o seleccionarlas juntas). El sistema acumula las variedades, suma plantas repetidas y asigna cada una a su <strong>Producto Maestro</strong>.
-                                        </div>
-                                    </div>
-                                    <label id="btn-label-escanear-factura" class="btn-action" style="background: #22C55E; color: #052E16; cursor: pointer; height: 48px; padding: 0 20px; font-size: 14px; font-weight: 800; border-radius: 10px; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);">
-                                        📷 Tomar Foto / Cargar Factura(s)
-                                        <input type="file" id="input-foto-guia-manuscrita" accept="image/*" multiple style="display: none;" onchange="procesarFotoGuiaManuscrita(this)">
-                                    </label>
-                                </div>
-
-                                <!-- MEDIDOR DE PROGRESO DEL ESCANEO -->
-                                <div id="contenedor-progreso-ocr" style="display: none; margin-top: 16px; background: rgba(15, 23, 42, 0.75); border: 1px solid #38BDF8; border-radius: 10px; padding: 12px 14px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                        <span id="texto-etapa-ocr" style="font-size: 12.5px; font-weight: 700; color: #38BDF8;">
-                                            ⏳ Leyendo factura física...
-                                        </span>
-                                        <span id="porcentaje-progreso-ocr" class="tabular" style="font-size: 13px; font-weight: 800; color: #4ADE80;">0%</span>
-                                    </div>
-                                    <div style="width: 100%; height: 10px; background: #1E293B; border-radius: 999px; overflow: hidden; border: 1px solid #475569;">
-                                        <div id="barra-progreso-ocr" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38BDF8 0%, #22C55E 100%); transition: width 0.35s ease;"></div>
-                                    </div>
-                                    <div id="box-reintentar-ocr" style="display: none; margin-top: 10px; text-align: center;">
-                                        <button type="button" onclick="reintentarUltimoEscaneo()" style="background: #2563EB; color: #FFFFFF; font-weight: 800; font-size: 13px; border: none; border-radius: 6px; padding: 8px 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(37,99,235,0.5);">
-                                            🔄 Reintentar Lectura con IA (Sin volver a tomar foto)
-                                        </button>
-                                        <div style="font-size: 11px; color: #CBD5E1; margin-top: 4px;">
-                                            (Pulsa aquí tras unos segundos si Google reportó saturación temporal)
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div id="panel-preview-guia-manuscrita" style="display: none; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.15);">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                        <span id="estado-ocr-guia" style="font-size: 12px; font-weight: 700; color: #86EFAC;">Facturas cargadas:</span>
-                                        <button type="button" class="btn-remove" onclick="descartarYLimpiarFacturas(true)">✕ Limpiar Facturas</button>
-                                    </div>
-                                    <div id="galeria-previews-paso1" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
-                                    <img id="img-preview-guia-manuscrita" src="" alt="Guía Física" style="display: none;">
-                                </div>
-                            </div>
-
-                            <div class="field-group">
-                                <label class="field-label" for="input-numero-factura">
-                                    <span>📄 N° de Factura(s) / Guía(s) Física(s)</span>
-                                    <span style="color: var(--brand-accent); font-weight: 700;">Vista completa en móvil</span>
-                                </label>
-                                <input type="text" id="input-numero-factura" class="field-input tabular" style="font-weight: 800; font-size: 15px; width: 100%;" placeholder="Ej: 001-002-0001041, 1042..." oninput="guardarBorradorLocal()">
-                                <input type="hidden" id="input-codigo-guia" value="{{ siguiente_guia }}">
-                                <input type="hidden" id="input-producto-maestro" value="">
-                            </div>
-
-                            <div class="form-row-2">
-                                <div class="field-group">
-                                    <label class="field-label" for="input-fecha-factura">
-                                        <span>📅 Fecha de la Factura / Guía Física</span>
-                                        <span style="color: #0284C7; font-weight: 700;">Independiente del registro</span>
-                                    </label>
-                                    <input type="text" id="input-fecha-factura" class="field-input tabular" placeholder="Ej: 11/11/2026 (se extrae de la factura)" oninput="guardarBorradorLocal()">
-                                </div>
-                                <div class="field-group">
-                                    <label class="field-label" for="input-fecha">
-                                        <span>🗓️ Fecha de Registro de Calificación *</span>
-                                        <span style="color: var(--ink-muted);">Día de inspección</span>
-                                    </label>
-                                    <input type="date" id="input-fecha" class="field-input tabular" value="{{ fecha_hoy_iso }}" onchange="actualizarSemanaDesdeFecha()">
-                                </div>
-                            </div>
-
-                            <div class="field-group">
-                                <label class="field-label">Semana Comercial &amp; Asegurador Responsable</label>
-                                <div style="display: grid; grid-template-columns: 115px 1fr; gap: 8px;">
-                                    <div class="week-display-box" style="padding: 0 10px;">
-                                        <span class="w-lbl" style="font-size: 10px;">Sem</span>
-                                        <span class="w-code" id="lbl-semana-calculada" style="font-size: 14px;">{{ semana_actual }}</span>
-                                    </div>
-                                    <input type="text" id="input-responsable" class="field-input" value="{{ responsable_actual }}" readonly title="Asegurador Responsable">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PASO 2: REVISIÓN DE FACTURA (VARIEDADES, PRODUCTO MAESTRO AUTO-ASIGNADO Y PLANTAS) -->
-            <div id="step-panel-2" class="wizard-step">
-                <div class="card">
-                    <div class="card-header">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <span class="step-tag">Paso 2 de 4 · Verificación de Factura(s) y Productos</span>
-                                <h2 class="card-title">Variedades Detectadas <span id="lbl-factura-paso2" class="tabular" style="font-size: 14px; color: var(--brand-accent);"></span></h2>
-                                <p class="card-subtitle">Si te llegaron <strong>3 o 4 facturas</strong>, pulsa <strong>+ Cargar / Sumar Otra Factura</strong> aquí mismo para acumular todas las variedades antes de pasar a calificar.</p>
-                            </div>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <label class="btn-action" style="background: #16A34A; color: #FFFFFF; cursor: pointer; height: 38px; padding: 0 14px; font-size: 12.5px; font-weight: 800; border-radius: 8px;">
-                                    📷 + Cargar / Sumar Otra Factura
-                                    <input type="file" id="input-foto-guia-adicional-paso2" accept="image/*" multiple style="display: none;" onchange="procesarFotoGuiaManuscrita(this)">
-                                </label>
-                                <button type="button" id="btn-ver-foto-guia-paso2" class="btn-action" style="display: none; background: #0F172A; color: #38BDF8; height: 38px; font-size: 12px;" onclick="toggleFotoGuiaEnPaso2()">
-                                    👁️ Ver / Ocultar Fotos de Facturas
-                                </button>
-                                <button type="button" class="btn-remove" style="height: 38px; padding: 0 12px; font-size: 12px;" onclick="descartarYLimpiarFacturas(true)">
-                                    🗑️ Limpiar / Quitar Facturas
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <!-- Barra de progreso también visible en el Paso 2 cuando se carga la Factura #2, #3, #4 -->
-                        <div id="contenedor-progreso-ocr-paso2" style="display: none; margin-bottom: 12px; background: #0F172A; border: 1.5px solid #38BDF8; border-radius: 10px; padding: 10px 14px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                <span id="texto-etapa-ocr-paso2" style="font-size: 12.5px; font-weight: 700; color: #38BDF8;">
-                                    ⏳ Procesando factura adicional...
-                                </span>
-                                <span id="porcentaje-progreso-ocr-paso2" class="tabular" style="font-size: 13px; font-weight: 800; color: #4ADE80;">0%</span>
-                            </div>
-                            <div style="width: 100%; height: 9px; background: #1E293B; border-radius: 999px; overflow: hidden;">
-                                <div id="barra-progreso-ocr-paso2" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38BDF8 0%, #22C55E 100%); transition: width 0.35s ease;"></div>
-                            </div>
-                            <div id="box-reintentar-ocr-paso2" style="display: none; margin-top: 10px; text-align: center;">
-                                <button type="button" onclick="reintentarUltimoEscaneo()" style="background: #2563EB; color: #FFFFFF; font-weight: 800; font-size: 13px; border: none; border-radius: 6px; padding: 7px 16px; cursor: pointer;">
-                                    🔄 Reintentar Lectura con IA
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Galería de imágenes de las facturas escaneadas dentro del Paso 2 -->
-                        <div id="visor-foto-guia-paso2" style="display: none; background: #0F172A; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
-                            <div style="font-size: 11.5px; color: #38BDF8; font-weight: 700; margin-bottom: 8px;">📷 Fotos de las Facturas / Guías Físicas Escaneadas</div>
-                            <div id="galeria-fotos-facturas-paso2" style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;"></div>
-                            <img id="img-guia-paso2" src="" alt="Factura escaneada" style="display: none;">
-                        </div>
-
-                        <!-- Resumen de lectura de factura (identificadas vs revisión manual) -->
-                        <div id="resumen-escaneo-paso2" style="display: none; padding: 10px 14px; border-radius: 10px; font-size: 12.5px; margin-bottom: 12px;"></div>
-
-                        <div class="slicer-bar">
-                            <label class="field-label" for="slicer-variedad">
-                                <span>Agregar otra Variedad manualmente (se asigna sola a su Producto Maestro)</span>
-                                <span id="lbl-disponibles-count" class="tabular">Catálogo completo</span>
-                            </label>
-                            <div class="slicer-controls">
-                                <select id="slicer-variedad" class="field-select">
-                                    <option value="">— Elige una variedad —</option>
-                                </select>
-                                <button type="button" class="btn-action" onclick="agregarVariedadDesdeSlicer()">
-                                    + Agregar Variedad
-                                </button>
-                            </div>
-                        </div>
-
-                        <div id="lista-variedades-agregadas" class="variedades-grid-responsive"></div>
-
-                        <!-- Botón destacado de Guardar y Pasar al Consolidado de Envío -->
-                        <div style="margin-top: 18px; padding: 14px 16px; background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                            <div>
-                                <div style="font-weight: 800; font-size: 14px; color: #0F172A;">¿Revisión de Facturas y Variedades Lista?</div>
-                                <div style="font-size: 12px; color: #64748B;">Guarda este conteo inicial y avanza al consolidado por producto maestro para verificar totales y registrar novedades de descargue.</div>
-                            </div>
-                            <button type="button" class="btn-action" style="background: #0284C7; color: #FFFFFF; font-weight: 800; height: 44px; padding: 0 18px; border-radius: 8px; box-shadow: 0 3px 10px rgba(2, 132, 199, 0.35); font-size: 13.5px;" onclick="guardarConteoPaso2YAvanzar()">
-                                💾 Guardar y Ver Consolidado de Envío →
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PASO 3: CONSOLIDADO DE ENVÍO Y VERIFICACIÓN FÍSICA (PERSONAL DE DESCARGUE) -->
-            <div id="step-panel-3" class="wizard-step">
-                <div class="card">
-                    <div class="card-header">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <span class="step-tag">Paso 3 de 4 · Consolidado de Envío y Verificación de Descargue</span>
-                                <h2 class="card-title">Consolidado de Envío y Conteo Físico</h2>
-                                <p class="card-subtitle">Verificación exacta de plantas recibidas por <strong>Producto Maestro</strong> y <strong>Variedad</strong>. Ajusta el conteo físico si difiere de la factura y registra cualquier novedad del camión.</p>
-                            </div>
-                            <div id="badge-rol-paso3" style="display: flex; align-items: center; gap: 6px;"></div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div id="contenedor-consolidado-paso3"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PASO 4: FILTRO POR PRODUCTO MAESTRO + BANDEJAS/GAVETAS (10%) + CALIFICACIÓN 1, 2, 3 -->
-            <div id="step-panel-4" class="wizard-step">
-                <div class="card">
+            <!-- Panel de Auditoría Técnica y Parámetros (Paso 4) -->
+            <div id="step-panel-4" class="wizard-step active">
+                <div class="card" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 14px; overflow: hidden;">
                     <div class="card-header" style="background: #F8FAFC; border-bottom: 1.5px solid #E2E8F0; padding: 14px 18px;">
                         <span class="step-tag" id="tag-paso4-pm" style="background: #0F172A; color: #38BDF8;">Paso 4 de 4 · Muestreo (10%) y Calificación</span>
                         <h2 class="card-title" id="titulo-paso4-pm" style="font-size: 18px; margin-top: 4px;">Calificación por Producto Maestro y Variedad</h2>
                         <p class="card-subtitle" id="subtitulo-paso4-pm" style="font-size: 12.5px; color: #475569;">Pulsa en "🔍 Calificar →" sobre cualquiera de las recepciones validadas arriba para comenzar.</p>
                     </div>
-                    <div class="card-body">
-                        <!-- Alerta visual de Novedades de Descargue visible para el Asegurador de Calidad -->
+                    <div class="card-body" style="padding: 18px;">
                         <div id="alerta-novedades-en-paso4" style="display: none; background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px;"></div>
-
-                        <!-- Barra secundaria desactivada para que el único control sea la tarjeta de guías validadas superior -->
                         <div id="barra-filtro-pm-paso3" style="display: none !important;"></div>
-
                         <div id="tabs-variedades-paso3" class="variety-tabs-strip"></div>
                         <div id="contenedor-parametros-paso3"></div>
                     </div>
                 </div>
             </div>
-
         </section>
 
         <!-- ===================================================================== -->
@@ -3866,15 +3854,21 @@
                 idsGuardadosFacturaActual = data.ids_guardados || [data.recepcion_id];
                 (data.recepciones || [data.recepcion]).forEach(r => actualizarOInsertarEnHistorialLocal(r));
 
+                actualizarBadgesNavegacion();
+                renderizarListaFacturasCargadas();
+                renderizarBannerGuiasPendientesCalidad();
+
+                const numFacFinalizada = document.getElementById("input-numero-factura")?.value || data.recepcion.numero_factura || data.recepcion.codigo_guia;
+
                 if (esDescarguePuro && ES_PERSONAL_DESCARGUE) {
                     const cont = document.getElementById("contenedor-consolidado-paso3");
                     if (cont) {
                         cont.innerHTML = `
                             <div style="text-align: center; padding: 40px 20px; background: #F0FDF4; border: 2px solid #86EFAC; border-radius: 14px;">
                                 <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
-                                <h2 style="font-size: 20px; font-weight: 800; color: #065F46; margin-bottom: 6px;">¡Descargue Validado y Enviado a Calidad!</h2>
+                                <h2 style="font-size: 20px; font-weight: 800; color: #065F46; margin-bottom: 6px;">¡Descargue de Factura #${numFacFinalizada} Validado y Enviado a Calidad!</h2>
                                 <p style="font-size: 13.5px; color: #166534; max-width: 520px; margin: 0 auto 18px auto;">
-                                    El conteo físico de <strong>${data.recepcion.total_plantas_recibidas.toLocaleString()} plantas</strong> ha sido registrado y enviado al personal de Calidad para su inspección de muestreo (10%).
+                                    El conteo físico de <strong>${data.recepcion.total_plantas_recibidas.toLocaleString()} plantas</strong> ha sido registrado y enviado al personal de Calidad para su muestreo del 10%.
                                 </p>
                                 ${tieneNovedadesDescargue ? `
                                     <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px 14px; max-width: 480px; margin: 0 auto 20px auto; text-align: left; font-size: 12.5px; color: #92400E;">
@@ -3882,17 +3876,20 @@
                                     </div>
                                 ` : ''}
                                 <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-                                    <button type="button" class="btn-action" style="background: #16A34A; height: 44px; padding: 0 18px; font-size: 13.5px;" onclick="reiniciarFormularioEnBlanco('${data.siguiente_guia}')">
-                                        📷 Cargar Otra Factura / Furgón
+                                    <button type="button" class="btn-action" style="background: #0284C7; height: 44px; padding: 0 18px; font-size: 13.5px; font-weight: 800;" onclick="renderizarSelectorFacturasDescargue()">
+                                        📦 Validar Siguiente Factura
+                                    </button>
+                                    <button type="button" class="btn-action" style="background: #16A34A; height: 44px; padding: 0 18px; font-size: 13.5px; font-weight: 800;" onclick="cambiarVista('facturas')">
+                                        📄 Cargar Nuevas Facturas
                                     </button>
                                     <button type="button" class="btn-action" style="background: #0F172A; color: #38BDF8; height: 44px; padding: 0 18px; font-size: 13.5px;" onclick="cambiarVista('historial')">
-                                        📋 Ver Historial
+                                        📊 Ver Reportes y Resumen
                                     </button>
                                 </div>
                             </div>
                         `;
                     }
-                    mostrarToast("✅ Descargue validado y enviado a Calidad.");
+                    mostrarToast(`✅ Descargue de Factura #${numFacFinalizada} validado y enviado a Calidad.`);
                 } else {
                     mostrarToast("✅ Descargue validado.");
                 }
@@ -3990,16 +3987,21 @@
                 subtituloEl.innerHTML = `Auditoría técnica de <strong>${productoMaestroActual}</strong> ${numFac ? `(Factura #${numFac})` : ''}. Verifica si llegó en <strong>Gavetas o Bandejas</strong> para calcular el 10% y califica cada parámetro del 1 al 3.`;
             }
 
-            // Alerta visible de Novedades de Descargue si existen
+            // Alerta visible de Novedades de Descargue si existen para este Producto Maestro
             const bannerNovedades = document.getElementById("alerta-novedades-en-paso4");
             if (bannerNovedades) {
-                if (tieneNovedadesDescargue) {
+                const recActual = (historialRecepciones || []).find(r => r.id === recepcionIdActual) || {};
+                const varsPM = variedadesAgregadas.filter(v => (v.producto_maestro || obtenerProductoMaestroDeVariedad(v.variedad)) === productoMaestroActual);
+                const tieneDiscrepanciaEstePM = varsPM.some(v => (v.contenedores_recibidos !== (v.contenedores_factura || v.contenedores_recibidos)) || (v.plantas_recibidas !== (v.plantas_factura || v.plantas_recibidas)));
+                const esNovedadEstePM = Boolean(recActual.tiene_novedades_descargue || tieneDiscrepanciaEstePM);
+
+                if (esNovedadEstePM) {
                     bannerNovedades.style.display = "flex";
                     bannerNovedades.innerHTML = `
                         <div style="font-size: 20px; margin-right: 10px;">⚠️</div>
                         <div>
-                            <strong style="color: #92400E; font-size: 13.5px;">ALERTA DE NOVEDADES EN DESCARGUE (Reportado por: ${responsableDescargue || 'Personal de Descargue'}):</strong>
-                            <div style="font-size: 12.5px; color: #B45309; margin-top: 3px;">${observacionesDescargue || 'Se reportaron discrepancias de cantidades o daños en el descargue físico.'}</div>
+                            <strong style="color: #92400E; font-size: 13.5px;">ALERTA DE NOVEDADES EN DESCARGUE (${productoMaestroActual} - Reportado por: ${responsableDescargue || recActual.responsable_descargue || 'Personal de Descargue'}):</strong>
+                            <div style="font-size: 12.5px; color: #B45309; margin-top: 3px;">${recActual.observaciones_descargue || observacionesDescargue || 'Se reportaron discrepancias de cantidades o novedades en el descargue físico de este producto.'}</div>
                         </div>
                     `;
                 } else {
@@ -4869,6 +4871,312 @@
             abrirFichaResumenWhatsappPorGuia(id);
         }
 
+        // =====================================================================
+        // GESTIÓN DE FACTURAS POR NÚMERO (DESCARGUE FÍSICO Y CARGA DÍA TRAS DÍA)
+        // =====================================================================
+        function obtenerFacturasAgrupadas() {
+            const mapa = {};
+            (historialRecepciones || []).forEach(r => {
+                const numFac = (r.numero_factura || r.codigo_guia || "S/N").trim();
+                if (!mapa[numFac]) {
+                    mapa[numFac] = {
+                        numero_factura: numFac,
+                        codigo_guia: r.codigo_guia,
+                        fecha_factura: r.fecha_factura || "",
+                        fecha_recepcion: r.fecha_recepcion || "",
+                        semana: r.semana || "",
+                        responsable: r.responsable || "",
+                        responsable_descargue: r.responsable_descargue || r.responsable || "",
+                        estado_flujo: r.estado_flujo || "COMPLETADA",
+                        recepciones: [],
+                        total_plantas: 0,
+                        total_contenedores: 0,
+                        pms: new Set(),
+                        variedadesNombres: [],
+                        tiene_novedades: false,
+                        observaciones_descargue: "",
+                    };
+                }
+                const g = mapa[numFac];
+                g.recepciones.push(r);
+                g.total_plantas += (r.total_plantas_recibidas || 0);
+                g.total_contenedores += (r.total_contenedores_recibidos || 0);
+                if (r.producto_maestro) g.pms.add(r.producto_maestro);
+                (r.variedades || []).forEach(v => {
+                    if (v.variedad && !g.variedadesNombres.includes(v.variedad)) {
+                        g.variedadesNombres.push(v.variedad);
+                    }
+                });
+                if (r.tiene_novedades_descargue) {
+                    g.tiene_novedades = true;
+                    if (r.observaciones_descargue) g.observaciones_descargue = r.observaciones_descargue;
+                }
+                if (r.estado_flujo === "EN_CONTEO") {
+                    g.estado_flujo = "EN_CONTEO";
+                } else if (r.estado_flujo === "VALIDADO_DESCARGUE" && g.estado_flujo !== "EN_CONTEO") {
+                    g.estado_flujo = "VALIDADO_DESCARGUE";
+                }
+            });
+            return mapa;
+        }
+
+        function actualizarBadgesNavegacion() {
+            const facturas = Object.values(obtenerFacturasAgrupadas());
+            const conteoDescargue = facturas.filter(f => f.estado_flujo === "EN_CONTEO").length;
+            const conteoCalidad = (historialRecepciones || []).filter(r => r.estado_flujo === "VALIDADO_DESCARGUE").length;
+
+            const bDesc = document.getElementById("badge-total-descargue");
+            if (bDesc) bDesc.textContent = conteoDescargue;
+            const bCal = document.getElementById("badge-total-calidad");
+            if (bCal) bCal.textContent = conteoCalidad;
+            const bGuias = document.getElementById("badge-total-guias");
+            if (bGuias) bGuias.textContent = historialRecepciones.length;
+        }
+
+        function renderizarListaFacturasCargadas() {
+            const cont = document.getElementById("contenedor-lista-facturas-semana");
+            if (!cont) return;
+
+            const agrupadas = obtenerFacturasAgrupadas();
+            const facturas = Object.values(agrupadas);
+
+            if (facturas.length === 0) {
+                cont.innerHTML = `
+                    <div style="text-align: center; padding: 36px 20px; background: #F8FAFC; border: 2px dashed #CBD5E1; border-radius: 12px;">
+                        <div style="font-size: 36px; margin-bottom: 8px;">📷</div>
+                        <h4 style="font-size: 15px; font-weight: 800; color: #1E293B; margin: 0 0 4px;">No hay facturas cargadas en el sistema</h4>
+                        <p style="font-size: 12.5px; color: #64748B; margin: 0 0 14px;">
+                            Usa el botón superior <strong>"Tomar Foto / Cargar Factura(s)"</strong> para fotografiar las facturas físicas conforme llegan a la bodega día tras día.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Ordenar: primero las que están pendientes (EN_CONTEO), luego las validadas
+            facturas.sort((a, b) => {
+                if (a.estado_flujo === "EN_CONTEO" && b.estado_flujo !== "EN_CONTEO") return -1;
+                if (b.estado_flujo === "EN_CONTEO" && a.estado_flujo !== "EN_CONTEO") return 1;
+                return b.numero_factura.localeCompare(a.numero_factura);
+            });
+
+            cont.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px;">
+                    ${facturas.map(f => {
+                        let badgeEstado = "";
+                        if (f.estado_flujo === "EN_CONTEO") {
+                            badgeEstado = `<span class="badge-status badge-regular" style="font-size: 10.5px; font-weight: 800;">📦 Pendiente Conteo Furgón</span>`;
+                        } else if (f.estado_flujo === "VALIDADO_DESCARGUE") {
+                            badgeEstado = `<span class="badge-status" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 10.5px; font-weight: 800;">📤 Validado en Descargue</span>`;
+                        } else {
+                            badgeEstado = `<span class="badge-status badge-muy-bueno" style="font-size: 10.5px; font-weight: 800;">✅ Auditado por Calidad</span>`;
+                        }
+
+                        const pmsStr = Array.from(f.pms).join(", ") || "Sin clasificar";
+                        const varsPreview = f.variedadesNombres.slice(0, 3).join(", ") + (f.variedadesNombres.length > 3 ? ` (+${f.variedadesNombres.length - 3})` : "");
+
+                        return `
+                            <div style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 14px 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                        <div>
+                                            <strong style="font-size: 15px; color: #0F172A;">📄 Factura #${f.numero_factura}</strong>
+                                            ${f.fecha_factura ? `<div style="font-size: 11.5px; color: #64748B;">📅 Factura: ${f.fecha_factura}</div>` : ''}
+                                        </div>
+                                        ${badgeEstado}
+                                    </div>
+                                    <div style="font-size: 12.5px; color: #334155; margin-top: 8px;">
+                                        🌿 <strong>${pmsStr}</strong>
+                                    </div>
+                                    <div style="font-size: 11.5px; color: #64748B; margin-top: 3px;">
+                                        Variedades: ${varsPreview || 'Sin variedades'}
+                                    </div>
+                                    <div style="font-size: 11.5px; color: #15803D; font-weight: 700; margin-top: 4px;">
+                                        📦 ${f.total_plantas.toLocaleString()} plantas (${f.total_contenedores} u.)
+                                    </div>
+                                    ${f.tiene_novedades ? `<div style="font-size: 11px; color: #D97706; font-weight: 700; margin-top: 4px;">⚠️ Novedad reportada</div>` : ''}
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #F1F5F9; padding-top: 10px;">
+                                    <button type="button" class="btn-action"
+                                        style="height: 36px; padding: 0 14px; font-size: 12.5px; font-weight: 800; background: #0284C7; color: #FFFFFF; border-radius: 8px; width: 100%; justify-content: center;"
+                                        onclick="irADescargueDeFactura('${f.numero_factura}')">
+                                        📦 Conteo de Furgón →
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join("")}
+                </div>
+            `;
+        }
+
+        function renderizarSelectorFacturasDescargue() {
+            const sel = document.getElementById("sel-factura-descargue");
+            const pillsCont = document.getElementById("pills-facturas-descargue");
+            const alertaVacio = document.getElementById("box-alerta-sin-factura-descargue");
+            const panelActivo = document.getElementById("panel-activo-descargue");
+            if (!sel || !pillsCont) return;
+
+            const agrupadas = obtenerFacturasAgrupadas();
+            const facturas = Object.values(agrupadas);
+
+            if (facturas.length === 0) {
+                sel.innerHTML = '<option value="">No hay facturas cargadas</option>';
+                pillsCont.innerHTML = "";
+                if (alertaVacio) alertaVacio.style.display = "block";
+                if (panelActivo) panelActivo.style.display = "none";
+                return;
+            }
+
+            // Ordenar: primero las que están EN_CONTEO, luego VALIDADO_DESCARGUE, luego COMPLETADA
+            facturas.sort((a, b) => {
+                if (a.estado_flujo === "EN_CONTEO" && b.estado_flujo !== "EN_CONTEO") return -1;
+                if (b.estado_flujo === "EN_CONTEO" && a.estado_flujo !== "EN_CONTEO") return 1;
+                return b.numero_factura.localeCompare(a.numero_factura);
+            });
+
+            // Determinar cuál factura seleccionar: la actual si está en la lista, o la primera pendiente
+            let facSeleccionada = "";
+            const numFacActual = document.getElementById("input-numero-factura")?.value;
+            if (numFacActual && agrupadas[numFacActual]) {
+                facSeleccionada = numFacActual;
+            } else {
+                const primeraPendiente = facturas.find(f => f.estado_flujo === "EN_CONTEO") || facturas[0];
+                facSeleccionada = primeraPendiente.numero_factura;
+            }
+
+            // Opciones del <select>
+            sel.innerHTML = facturas.map(f => {
+                const estadoTxt = f.estado_flujo === "EN_CONTEO" ? "⏳ Pendiente Conteo" : (f.estado_flujo === "VALIDADO_DESCARGUE" ? "📤 Validado (En Calidad)" : "✅ Calificado");
+                const selAttr = f.numero_factura === facSeleccionada ? "selected" : "";
+                const pmsStr = Array.from(f.pms).join(", ") || "General";
+                return `<option value="${f.numero_factura}" ${selAttr}>📄 Factura #${f.numero_factura} (${pmsStr}) · ${f.total_plantas.toLocaleString()} pl [${estadoTxt}]</option>`;
+            }).join("");
+
+            // Pills rápidos
+            pillsCont.innerHTML = facturas.map(f => {
+                const esSel = f.numero_factura === facSeleccionada;
+                const dotColor = f.estado_flujo === "EN_CONTEO" ? "#F59E0B" : (f.estado_flujo === "VALIDADO_DESCARGUE" ? "#38BDF8" : "#22C55E");
+                return `
+                    <button type="button" class="btn-action pill-fac-btn" data-factura="${f.numero_factura}"
+                        style="height: 34px; padding: 0 11px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 1.5px solid ${esSel ? '#0284C7' : '#CBD5E1'}; background: ${esSel ? '#0284C7' : '#FFFFFF'}; color: ${esSel ? '#FFFFFF' : '#0F172A'}; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;"
+                        onclick="seleccionarFacturaParaDescargue('${f.numero_factura}')">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${dotColor};"></span>
+                        <span>Fac #${f.numero_factura}</span>
+                    </button>
+                `;
+            }).join("");
+
+            // Cargar la factura seleccionada si no estaba cargada
+            if (facSeleccionada && (!variedadesAgregadas || variedadesAgregadas.length === 0 || document.getElementById("input-numero-factura")?.value !== facSeleccionada)) {
+                seleccionarFacturaParaDescargue(facSeleccionada);
+            }
+        }
+
+        function irADescargueDeFactura(numFac) {
+            cambiarVista("descargue");
+            seleccionarFacturaParaDescargue(numFac);
+        }
+
+        function seleccionarFacturaParaDescargue(numFac) {
+            const agrupadas = obtenerFacturasAgrupadas();
+            const facturaObj = agrupadas[numFac];
+
+            const alertaVacio = document.getElementById("box-alerta-sin-factura-descargue");
+            const panelActivo = document.getElementById("panel-activo-descargue");
+
+            if (!facturaObj) {
+                if (alertaVacio) alertaVacio.style.display = "block";
+                if (panelActivo) panelActivo.style.display = "none";
+                return;
+            }
+
+            if (alertaVacio) alertaVacio.style.display = "none";
+            if (panelActivo) panelActivo.style.display = "block";
+
+            // Sincronizar select
+            const sel = document.getElementById("sel-factura-descargue");
+            if (sel && sel.value !== numFac) sel.value = numFac;
+
+            // Actualizar estilo activo en pills
+            document.querySelectorAll(".pill-fac-btn").forEach(btn => {
+                const esSel = btn.getAttribute("data-factura") === numFac;
+                btn.style.background = esSel ? "#0284C7" : "#FFFFFF";
+                btn.style.color = esSel ? "#FFFFFF" : "#0F172A";
+                btn.style.borderColor = esSel ? "#0284C7" : "#CBD5E1";
+            });
+
+            // Cargar datos de la factura
+            const recs = facturaObj.recepciones;
+            recepcionIdActual = recs[0].id;
+            recepcionIdsPorPM = {};
+            recs.forEach(r => {
+                if (r.producto_maestro) recepcionIdsPorPM[r.producto_maestro] = r.id;
+            });
+            idsGuardadosFacturaActual = recs.map(r => r.id);
+            productoMaestroActual = recs[0].producto_maestro || "";
+            tieneNovedadesDescargue = facturaObj.tiene_novedades;
+            observacionesDescargue = facturaObj.observaciones_descargue;
+            responsableDescargue = facturaObj.responsable_descargue;
+
+            document.getElementById("input-numero-factura").value = numFac;
+            if (document.getElementById("input-fecha-factura")) {
+                document.getElementById("input-fecha-factura").value = facturaObj.fecha_factura || "";
+            }
+            if (recs[0].codigo_guia) {
+                document.getElementById("input-codigo-guia").value = recs[0].codigo_guia;
+            }
+
+            // Consolidar variedades de todas las recepciones de esta factura
+            const todasVars = [];
+            recs.forEach(r => {
+                (r.variedades || []).forEach(v => {
+                    const paramsMap = {};
+                    PARAMETROS_CALIDAD.forEach(p => {
+                        paramsMap[p.codigo] = { puntaje: 3, observacion: "", plantas_afectadas: 0, porcentaje: 0, foto_url: "" };
+                    });
+                    (v.parametros || []).forEach(p => {
+                        paramsMap[p.codigo] = {
+                            puntaje: p.puntaje,
+                            observacion: p.observacion || "",
+                            plantas_afectadas: p.plantas_afectadas || 0,
+                            porcentaje: p.porcentaje_afectacion || p.porcentaje || 0,
+                            foto_url: p.foto_url || "",
+                        };
+                    });
+
+                    const lotesArr = (v.lotes && v.lotes.length > 0)
+                        ? v.lotes
+                        : [{
+                            guia_camion: `Factura ${numFac}`,
+                            fecha_factura: r.fecha_factura || "",
+                            tipo_contenedor: v.tipo_contenedor || "BANDEJA",
+                            plantas: v.plantas_recibidas,
+                            contenedores: v.contenedores_recibidos,
+                        }];
+
+                    todasVars.push({
+                        variedad: v.variedad,
+                        producto_maestro: r.producto_maestro || obtenerProductoMaestroDeVariedad(v.variedad),
+                        tipo_contenedor: v.tipo_contenedor || "BANDEJA",
+                        lotes: lotesArr,
+                        plantas_factura: v.plantas_factura || v.plantas_recibidas,
+                        plantas_recibidas: v.plantas_recibidas,
+                        contenedores_factura: v.contenedores_factura || v.contenedores_recibidos,
+                        contenedores_recibidos: v.contenedores_recibidos,
+                        parametros: paramsMap,
+                    });
+                });
+            });
+
+            variedadesAgregadas = todasVars;
+            indiceVariedadPaso3 = 0;
+            indiceVariedadPaso4 = 0;
+
+            // Mostrar Conteo Físico en Furgón
+            irAPaso(3);
+        }
+
         function deseleccionarGuiaParaAuditar() {
             recepcionIdActual = null;
             variedadesAgregadas = [];
@@ -5374,9 +5682,13 @@
             const idx = historialRecepciones.findIndex(r => r.id === rec.id);
             if (idx !== -1) historialRecepciones[idx] = rec;
             else historialRecepciones.unshift(rec);
-            document.getElementById("badge-total-guias").textContent = historialRecepciones.length;
+            const bGuias = document.getElementById("badge-total-guias");
+            if (bGuias) bGuias.textContent = historialRecepciones.length;
             poblarSelectoresFiltroReportes();
             renderizarBannerGuiasPendientesCalidad();
+            actualizarBadgesNavegacion();
+            renderizarListaFacturasCargadas();
+            renderizarSelectorFacturasDescargue();
         }
 
         // =====================================================================
@@ -5475,13 +5787,19 @@
                 }
 
                 document.getElementById("banner-modo-edicion").style.display = "flex";
-                document.getElementById("txt-modo-edicion").textContent =
-                    `✏️ Editando Recepción ${r.codigo_guia} (${r.producto_maestro}). Modifica el consolidado en Paso 3 o la calificación en Paso 4.`;
-
-                cambiarVista("recepcion");
-                irAPaso(pasoDestino);
+                if (pasoDestino === 4) {
+                    document.getElementById("txt-modo-edicion").textContent =
+                        `✏️ Calificando Calidad de ${r.producto_maestro} (Factura #${r.numero_factura || r.codigo_guia}).`;
+                    cambiarVista("calidad");
+                    irAPaso(4);
+                } else {
+                    document.getElementById("txt-modo-edicion").textContent =
+                        `✏️ Corrigiendo Conteo de Furgón de Factura #${r.numero_factura || r.codigo_guia} (${r.producto_maestro}).`;
+                    cambiarVista("descargue");
+                    irAPaso(3);
+                }
                 renderizarBannerGuiasPendientesCalidad();
-                mostrarToast(`🌿 Calificando: ${r.producto_maestro} (${r.codigo_guia}).`);
+                mostrarToast(`🌿 ${pasoDestino === 4 ? 'Calificando' : 'Revisando conteo'}: ${r.producto_maestro} (${r.codigo_guia}).`);
             } catch (e) {
                 mostrarToast("⚠️ No se pudo cargar la recepción para editar.", true);
             }
@@ -5857,12 +6175,55 @@
 
             renderizarListaVariedadesAgregadasPaso2();
             guardarBorradorLocal();
-            mostrarToast(`✅ Factura sumada (${facturasEscaneadasActuales.length} factura(s) en total).`);
 
-            if (variedadesAgregadas.length > 0) {
-                setTimeout(() => {
-                    irAPaso(2);
-                }, 350);
+            // Auto-guardar en base de datos con estado EN_CONTEO para que quede disponible en el selector de descargue
+            const payloadAutoSave = {
+                recepcion_id: recepcionIdActual,
+                recepcion_ids_por_pm: recepcionIdsPorPM,
+                preservar_variedades_previas: false,
+                estado_flujo: "EN_CONTEO",
+                fecha_recepcion: document.getElementById("input-fecha").value || FECHA_HOY_ISO,
+                responsable: document.getElementById("input-responsable").value || RESPONSABLE_SESION,
+                responsable_descargue: RESPONSABLE_SESION,
+                tiene_novedades_descargue: false,
+                observaciones_descargue: "",
+                producto_maestro: productoMaestroActual,
+                codigo_guia: document.getElementById("input-codigo-guia").value,
+                numero_factura: document.getElementById("input-numero-factura").value,
+                fecha_factura: document.getElementById("input-fecha-factura")?.value || "",
+                observaciones_generales: "",
+                variedades: variedadesAgregadas,
+            };
+
+            try {
+                const respAuto = await fetch("/api/recepciones/guardar/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
+                    body: JSON.stringify(payloadAutoSave),
+                });
+                const dataAuto = await respAuto.json();
+                if (dataAuto.ok) {
+                    recepcionIdActual = dataAuto.recepcion_id;
+                    recepcionIdsPorPM = dataAuto.recepcion_ids_por_pm || {};
+                    idsGuardadosFacturaActual = dataAuto.ids_guardados || [dataAuto.recepcion_id];
+                    (dataAuto.recepciones || [dataAuto.recepcion]).forEach(r => actualizarOInsertarEnHistorialLocal(r));
+                }
+            } catch (eAuto) {
+                console.warn("Auto-guardado inicial tras escaneo:", eAuto);
+            }
+
+            renderizarListaFacturasCargadas();
+            renderizarSelectorFacturasDescargue();
+            actualizarBadgesNavegacion();
+
+            const vistaFacturasEl = document.getElementById("vista-facturas");
+            const estaEnVistaFacturas = vistaFacturasEl && vistaFacturasEl.classList.contains("active");
+
+            if (estaEnVistaFacturas) {
+                mostrarToast(`✅ Factura guardada en el sistema. Lista para descargue.`);
+            } else {
+                renderizarPaso3Consolidado();
+                mostrarToast(`✅ Factura sumada al descargue.`);
             }
         }
 
@@ -6587,9 +6948,60 @@
                         ? `<span class="badge-status badge-muy-malo" style="margin-left:4px;" title="${(r.observaciones_descargue || 'Novedades reportadas en descargue').replace(/"/g, '&quot;')}">⚠️ Novedad en Descargue</span>`
                         : "";
 
-                    const btnCalificarPlanta = (r.estado_flujo === "VALIDADO_DESCARGUE" && (ES_ASEGURADOR_CALIDAD || ES_ADMIN))
-                        ? `<button type="button" class="btn-action" style="height: 32px; padding: 0 11px; font-size: 11.5px; background: #16A34A; color: #FFFFFF; font-weight: 800;" onclick="cargarRecepcionParaEditar(${r.id}, 4)">🌿 Calificar Planta</button>`
-                        : "";
+                    // Botones de acción estrictamente filtrados según el rol del usuario:
+                    // 1. Personal de Descargue: SOLO botón "📦 Corregir Descargue" y "Resumen"
+                    // 2. Asegurador de Calidad: SOLO "🌿 Calificar Planta / Corregir Calidad", "📲 WhatsApp", "📊 Excel" y "Resumen"
+                    // 3. Administrador: Ambos botones de corrección más WhatsApp, Excel y Resumen
+                    let btnsHtml = "";
+
+                    if (ES_PERSONAL_DESCARGUE && !ES_ADMIN) {
+                        btnsHtml = `
+                            <button type="button" class="btn-action" style="height: 32px; padding: 0 11px; font-size: 11.5px; background: #0284C7; color: #FFFFFF; font-weight: 700; border-radius: 6px;" onclick="cargarRecepcionParaEditar(${r.id}, 3)" title="Corregir conteo de descargue de esta factura">
+                                📦 Corregir Descargue
+                            </button>
+                            <button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; border-radius: 6px;" onclick="verDetalleGuia(${r.id})">
+                                Resumen
+                            </button>
+                        `;
+                    } else if (ES_ASEGURADOR_CALIDAD && !ES_ADMIN) {
+                        const btnCalidad = (r.estado_flujo === "VALIDADO_DESCARGUE")
+                            ? `<button type="button" class="btn-action" style="height: 32px; padding: 0 11px; font-size: 11.5px; background: #16A34A; color: #FFFFFF; font-weight: 800; border-radius: 6px;" onclick="cargarRecepcionParaEditar(${r.id}, 4)">🌿 Calificar Planta →</button>`
+                            : `<button type="button" class="btn-action" style="height: 32px; padding: 0 11px; font-size: 11.5px; background: #1E293B; color: #38BDF8; font-weight: 700; border-radius: 6px;" onclick="cargarRecepcionParaEditar(${r.id}, 4)">🌿 Corregir Calidad</button>`;
+
+                        btnsHtml = `
+                            ${btnCalidad}
+                            <button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; background: #25D366; color: #052E16; font-weight: 800; border-radius: 6px;" onclick="abrirFichaResumenWhatsappPorGuia(${r.id})" title="Ver ficha infográfica para WhatsApp">
+                                📲 WhatsApp
+                            </button>
+                            <a href="/exportar/excel/${r.id}/" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; background: #15803D; text-decoration: none; border-radius: 6px; color: #FFFFFF;" title="Descargar Excel de esta recepción">
+                                📊 Excel
+                            </a>
+                            <button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; border-radius: 6px;" onclick="verDetalleGuia(${r.id})">
+                                Resumen
+                            </button>
+                        `;
+                    } else {
+                        // Admin: Tiene acceso a ambos botones
+                        const btnCalidadAdmin = (r.estado_flujo === "VALIDADO_DESCARGUE")
+                            ? `<button type="button" class="btn-action" style="height: 32px; padding: 0 11px; font-size: 11.5px; background: #16A34A; color: #FFFFFF; font-weight: 800; border-radius: 6px;" onclick="cargarRecepcionParaEditar(${r.id}, 4)">🌿 Calificar Planta →</button>`
+                            : `<button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; background: #1E293B; color: #38BDF8; font-weight: 700; border-radius: 6px;" onclick="cargarRecepcionParaEditar(${r.id}, 4)">🌿 Corregir Calidad</button>`;
+
+                        btnsHtml = `
+                            <button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; background: #0284C7; color: #FFFFFF; font-weight: 700; border-radius: 6px;" onclick="cargarRecepcionParaEditar(${r.id}, 3)" title="Corregir conteo de descargue">
+                                📦 Corregir Descargue
+                            </button>
+                            ${btnCalidadAdmin}
+                            <button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; background: #25D366; color: #052E16; font-weight: 800; border-radius: 6px;" onclick="abrirFichaResumenWhatsappPorGuia(${r.id})" title="Ver resumen para WhatsApp">
+                                📲 WhatsApp
+                            </button>
+                            <a href="/exportar/excel/${r.id}/" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; background: #15803D; text-decoration: none; border-radius: 6px; color: #FFFFFF;" title="Descargar Excel de esta recepción">
+                                📊 Excel
+                            </a>
+                            <button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; border-radius: 6px;" onclick="verDetalleGuia(${r.id})">
+                                Resumen
+                            </button>
+                        `;
+                    }
 
                     const varsTexto = (r.variedades || []).map(v => `${v.variedad} (${(v.plantas_recibidas || 0).toLocaleString()} pl)`).join(" · ");
 
@@ -6620,16 +7032,7 @@
                                     </div>
                                     <span class="badge-status ${clsBadge}" style="font-size: 10px;">${txtBadge}</span>
                                 </div>
-                                ${btnCalificarPlanta}
-                                <a href="/exportar/excel/${r.id}/" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; background: #15803D; text-decoration: none;" title="Descargar Excel de esta recepción específica">
-                                    📊 Excel
-                                </a>
-                                <button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px;" onclick="verDetalleGuia(${r.id})">
-                                    Resumen
-                                </button>
-                                <button type="button" class="btn-action" style="height: 32px; padding: 0 10px; font-size: 11.5px; background: #1E293B; color: #38BDF8;" onclick="cargarRecepcionParaEditar(${r.id}, 3)">
-                                    ✏️ Editar
-                                </button>
+                                ${btnsHtml}
                             </div>
                         </div>
                     `;
@@ -6701,10 +7104,39 @@
                     + ` · Fecha Calificación: ${r.fecha_recepcion} · Asegurador: ${r.responsable}`;
 
                 const btnEditar = document.getElementById("btn-modal-editar");
-                btnEditar.onclick = () => cargarRecepcionParaEditar(r.id, 3);
                 const btnWa = document.getElementById("btn-modal-wa");
-                if (btnWa) {
-                    btnWa.onclick = () => abrirFichaWhatsappDesdeHistorial(r.id);
+
+                if (ES_PERSONAL_DESCARGUE && !ES_ADMIN) {
+                    if (btnWa) btnWa.style.display = "none";
+                    if (btnEditar) {
+                        btnEditar.style.display = "inline-flex";
+                        btnEditar.style.background = "#0284C7";
+                        btnEditar.innerHTML = "📦 Corregir Descargue";
+                        btnEditar.onclick = () => cargarRecepcionParaEditar(r.id, 3);
+                    }
+                } else if (ES_ASEGURADOR_CALIDAD && !ES_ADMIN) {
+                    if (btnWa) {
+                        btnWa.style.display = "inline-flex";
+                        btnWa.onclick = () => abrirFichaWhatsappDesdeHistorial(r.id);
+                    }
+                    if (btnEditar) {
+                        btnEditar.style.display = "inline-flex";
+                        btnEditar.style.background = "#15803D";
+                        btnEditar.innerHTML = (r.estado_flujo === "VALIDADO_DESCARGUE") ? "🌿 Calificar Planta →" : "🌿 Corregir Calidad";
+                        btnEditar.onclick = () => cargarRecepcionParaEditar(r.id, 4);
+                    }
+                } else {
+                    // Admin ve todo
+                    if (btnWa) {
+                        btnWa.style.display = "inline-flex";
+                        btnWa.onclick = () => abrirFichaWhatsappDesdeHistorial(r.id);
+                    }
+                    if (btnEditar) {
+                        btnEditar.style.display = "inline-flex";
+                        btnEditar.style.background = "#2563EB";
+                        btnEditar.innerHTML = "✏️ Editar / Corregir";
+                        btnEditar.onclick = () => cargarRecepcionParaEditar(r.id, 3);
+                    }
                 }
 
                 let html = `
@@ -6716,7 +7148,7 @@
                                 Total Plantas Físicas: <strong>${r.total_plantas_recibidas.toLocaleString()}</strong> · Revisadas (10%): <strong>${r.total_contenedores_muestreados} u. (${r.total_plantas_muestreadas} pl)</strong>
                             </div>
                         </div>
-                        <a href="/exportar/excel/${r.id}/" class="btn-action" style="background: #15803D; text-decoration: none; height: 36px; font-size: 12.5px;">
+                        <a href="/exportar/excel/${r.id}/" class="btn-action" style="background: #15803D; text-decoration: none; height: 36px; font-size: 12.5px; ${ES_PERSONAL_DESCARGUE && !ES_ADMIN ? 'display: none;' : ''}">
                             📊 Descargar Resumen en Excel (.xlsx)
                         </a>
                     </div>
@@ -7016,18 +7448,28 @@
         function cambiarVista(vista) {
             document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
             document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
-            document.getElementById(`vista-${vista}`).classList.add("active");
+            const targetVista = document.getElementById(`vista-${vista}`);
+            if (targetVista) targetVista.classList.add("active");
             const tabEl = document.getElementById(`tab-${vista}`);
             if (tabEl) tabEl.classList.add("active");
 
             const barraWizard = document.getElementById("barra-navegacion-wizard");
-            barraWizard.style.display = vista === "recepcion" ? "block" : "none";
+            if (barraWizard) barraWizard.style.display = "none";
 
-            if (vista === "historial") {
+            if (vista === "facturas") {
+                renderizarListaFacturasCargadas();
+            } else if (vista === "descargue") {
+                renderizarSelectorFacturasDescargue();
+            } else if (vista === "calidad") {
+                renderizarBannerGuiasPendientesCalidad();
+                renderizarPaso4Calificacion();
+            } else if (vista === "historial") {
                 poblarSelectoresFiltroReportes();
                 renderizarGraficaYTablaReportes();
+            } else if (vista === "admin") {
+                renderizarPanelAdmin();
             }
-            if (vista === "admin") renderizarPanelAdmin();
+            actualizarBadgesNavegacion();
         }
 
         function mostrarToast(msg, esError = false) {
@@ -7043,13 +7485,20 @@
             poblarSelectoresProductoMaestro();
             restaurarBorradorLocal();
             actualizarSemanaDesdeFecha();
-            actualizarBotonesBarraInferior();
             verificarBannerColaOffline();
+            actualizarBadgesNavegacion();
+            renderizarListaFacturasCargadas();
+            renderizarSelectorFacturasDescargue();
+            renderizarBannerGuiasPendientesCalidad();
             renderizarGraficaYTablaReportes();
             renderizarPanelAdmin();
-            renderizarBannerGuiasPendientesCalidad();
+
             if (ES_ASEGURADOR_CALIDAD) {
-                irAPaso(4);
+                cambiarVista("calidad");
+            } else if (ES_PERSONAL_DESCARGUE) {
+                cambiarVista("facturas");
+            } else {
+                cambiarVista("facturas");
             }
         });
     </script>
