@@ -4266,21 +4266,24 @@
                             }
                         </div>
                     </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        ${(modoEdicionReporte && recActiva && recActiva.estado_flujo === 'COMPLETADA') ? `
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        ${estaPMCalificado ? `
                             <button type="button" class="btn-action"
-                                style="background: #25D366; color: #052E16; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3);"
-                                onclick="abrirFichaResumenWhatsappMulti([recActiva])">
+                                id="btn-inferior-whatsapp-calidad"
+                                style="background: #25D366; color: #052E16; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 5px;"
+                                onclick="abrirFichaWhatsappPaso4()">
                                 📲 Ficha WhatsApp
                             </button>
                             <button type="button" class="btn-action"
-                                style="background: #15803D; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px;"
+                                id="btn-inferior-excel-calidad"
+                                style="background: #15803D; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 16px; font-size: 12.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;"
                                 onclick="guardarYExportarExcelActual()">
                                 📊 Exportar Excel
                             </button>
                         ` : ''}
                         <button type="button" class="btn-action"
-                            style="background: ${estaPMCalificado ? '#15803D' : '#2563EB'}; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 18px; font-size: 13px; border-radius: 8px;"
+                            id="btn-inferior-guardar-calidad"
+                            style="background: ${estaPMCalificado ? '#15803D' : '#2563EB'}; color: #FFFFFF; font-weight: 800; height: 40px; padding: 0 18px; font-size: 13px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;"
                             onclick="validarYGuardarCalificacionPM('${pmActual}')">
                             ${estaPMCalificado ? `💾 Guardar Cambios en ${pmActual}` : `💾 Validar y Guardar Calificación de ${pmActual}`}
                         </button>
@@ -4300,7 +4303,7 @@
                             Se evaluaron todos los ${prodsMismaFac.length} productos de esta factura. Ya puedes abrir el collage consolidado para captura de WhatsApp o descargar el Excel.
                         </p>
                         <div style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;">
-                            <button type="button" class="btn-action" style="background: #25D366; color: #052E16; font-weight: 800; height: 42px; padding: 0 18px; font-size: 13px; border-radius: 9px; box-shadow: 0 3px 10px rgba(37,211,102,0.4);" onclick="abrirFichaResumenWhatsappMulti(obtenerRecepcionesDeFactura('${numFacActual}'))">
+                            <button type="button" class="btn-action" style="background: #25D366; color: #052E16; font-weight: 800; height: 42px; padding: 0 18px; font-size: 13px; border-radius: 9px; box-shadow: 0 3px 10px rgba(37,211,102,0.4);" onclick="abrirFichaCollageFactura('${numFacActual}')">
                                 📲 Ver Collage para WhatsApp (Factura #${numFacActual})
                             </button>
                             <a href="/exportar/excel/?ids=${idsFacStr}" class="btn-action" style="background: #047857; color: #FFFFFF; border: 1.5px solid #34D399; font-weight: 700; height: 42px; padding: 0 18px; font-size: 13px; border-radius: 9px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
@@ -4565,10 +4568,49 @@
 
         function obtenerRecepcionesDeFactura(numFac) {
             if (!numFac || numFac === "TODAS") {
-                return (historialRecepciones || []).filter(r => r.estado_flujo === "COMPLETADA");
+                const califs = (historialRecepciones || []).filter(r => r.estado_flujo === "COMPLETADA");
+                return califs.length > 0 ? califs : (historialRecepciones || []);
             }
-            const califs = (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === numFac && r.estado_flujo === "COMPLETADA");
-            return califs.length > 0 ? califs : (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === numFac);
+            const cleanFac = String(numFac).trim().toLowerCase();
+            const califs = (historialRecepciones || []).filter(r => {
+                const f = (r.numero_factura || r.codigo_guia || "").trim().toLowerCase();
+                return f === cleanFac && r.estado_flujo === "COMPLETADA";
+            });
+            if (califs.length > 0) return califs;
+            return (historialRecepciones || []).filter(r => {
+                const f = (r.numero_factura || r.codigo_guia || "").trim().toLowerCase();
+                return f === cleanFac;
+            });
+        }
+
+        function abrirFichaCollageFactura(numFac) {
+            const fac = (numFac || document.getElementById("input-numero-factura")?.value || "").trim();
+            let recs = obtenerRecepcionesDeFactura(fac);
+            if (!recs || recs.length === 0) {
+                if (recepcionIdActual) {
+                    const r = (historialRecepciones || []).find(x => Number(x.id) === Number(recepcionIdActual));
+                    if (r) recs = [r];
+                }
+            }
+            if (!recs || recs.length === 0) {
+                recs = (historialRecepciones || []).filter(r => r.estado_flujo === "COMPLETADA");
+            }
+            abrirFichaResumenWhatsappMulti(recs);
+        }
+
+        function abrirFichaWhatsappPaso4() {
+            if (recepcionIdActual) {
+                abrirFichaResumenWhatsappPorGuia(recepcionIdActual);
+                return;
+            }
+            const itemActual = variedadesAgregadas[indiceVariedadPaso3];
+            const pm = (itemActual && itemActual.producto_maestro) || filtroPMPaso3 || "GENERAL";
+            const rec = (historialRecepciones || []).find(r => (r.producto_maestro || "").toUpperCase() === pm.toUpperCase());
+            if (rec) {
+                abrirFichaResumenWhatsappPorGuia(rec.id);
+            } else {
+                abrirFichaResumenWhatsappMulti();
+            }
         }
 
         function abrirFichaResumenWhatsappMulti(recs = null) {
@@ -4618,8 +4660,27 @@
         }
 
         function abrirFichaResumenWhatsappPorGuia(guiaId) {
-            const r = (historialRecepciones || []).find(x => x.id === guiaId);
-            if (!r) return;
+            let r = (historialRecepciones || []).find(x => Number(x.id) === Number(guiaId));
+            if (!r && recepcionIdActual && Number(recepcionIdActual) === Number(guiaId)) {
+                const itemActual = variedadesAgregadas[indiceVariedadPaso3];
+                const pm = (itemActual && itemActual.producto_maestro) || filtroPMPaso3 || "GENERAL";
+                r = {
+                    id: recepcionIdActual,
+                    producto_maestro: pm,
+                    numero_factura: document.getElementById("input-numero-factura")?.value || "",
+                    codigo_guia: document.getElementById("input-codigo-guia")?.value || "",
+                    fecha_recepcion: document.getElementById("input-fecha")?.value || FECHA_HOY_ISO,
+                    semana: document.getElementById("lbl-semana-calculada")?.textContent || "",
+                    responsable: document.getElementById("input-responsable")?.value || RESPONSABLE_SESION,
+                    responsable_descargue: responsableDescargue || RESPONSABLE_SESION,
+                    estado_flujo: "COMPLETADA",
+                    variedades: variedadesAgregadas.filter(v => (v.producto_maestro || "").toUpperCase() === pm.toUpperCase()),
+                };
+            }
+            if (!r) {
+                mostrarToast("⚠️ No se encontró la información de la recepción para la ficha.", true);
+                return;
+            }
             abrirFichaResumenWhatsappMulti([r]);
         }
 
@@ -4780,17 +4841,19 @@
                                 ? '<span style="background: #991B1B; color: #FECACA; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">1 · GRAVE</span>'
                                 : (pts === 2
                                     ? '<span style="background: #92400E; color: #FDE68A; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">2 · REGULAR</span>'
-                                    : '<span style="background: #14532D; color: #BBF7D0; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">3 · LEVE</span>');
+                                    : '<span style="background: #14532D; color: #BBF7D0; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">3 · BUENO</span>');
 
                             return `
-                                <div style="background: rgba(15, 23, 42, 0.95); border-left: 3.5px solid ${pts === 1 ? '#EF4444' : (pts === 2 ? '#F59E0B' : '#38BDF8')}; border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                                <div style="background: rgba(15, 23, 42, 0.95); border-left: 3.5px solid ${pts === 1 ? '#EF4444' : (pts === 2 ? '#F59E0B' : '#10B981')}; border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                                     <div style="flex: 1; min-width: 0;">
                                         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                             <strong style="color: #FFFFFF; font-size: 12px;">${p.nombre}</strong>
                                             ${nivelTag}
-                                            <span style="font-size: 10.5px; font-weight: 800; color: #FCD34D;">
-                                                🌱 ${plAf} pl (${pctAf}% daño)
-                                            </span>
+                                            ${plAf > 0 ? `
+                                                <span style="font-size: 10.5px; font-weight: 800; color: #FCD34D;">
+                                                    🌱 ${plAf} pl (${pctAf}% daño)
+                                                </span>
+                                            ` : ''}
                                         </div>
                                         ${p.observacion ? `
                                             <div style="font-size: 11px; color: #E2E8F0; margin-top: 3px; background: rgba(0,0,0,0.25); padding: 3px 6px; border-radius: 4px;">
@@ -4924,15 +4987,19 @@
 
                     const defectos = (v.parametros || []).filter(p => p.puntaje < 3 || (p.plantas_afectadas && p.plantas_afectadas > 0) || p.observacion || p.foto_url);
                     if (defectos.length > 0) {
-                        txt += `  ⚠️ *Daño de planta y afectaciones:*\n`;
+                        txt += `  ⚠️ *Novedades y observaciones:*\n`;
                         defectos.forEach(p => {
-                            const nivel = p.puntaje === 1 ? "1 · GRAVE" : (p.puntaje === 2 ? "2 · REGULAR" : "3 · LEVE");
+                            const nivel = p.puntaje === 1 ? "1 · GRAVE" : (p.puntaje === 2 ? "2 · REGULAR" : "3 · BUENO");
                             const plAf = parseInt(p.plantas_afectadas, 10) || 0;
                             const totM = v.total_plantas_a_revisar || 1;
                             const pctAf = p.porcentaje_afectacion > 0
                                 ? `${p.porcentaje_afectacion.toFixed(1)}%`
                                 : (plAf > 0 ? ((plAf / totM) * 100).toFixed(1) + "%" : "0.0%");
-                            txt += `  - *${p.nombre}:* [${nivel}] ➔ ${plAf} pl (${pctAf} daño)\n`;
+                            if (plAf > 0 || p.puntaje < 3) {
+                                txt += `  - *${p.nombre}:* [${nivel}] ➔ ${plAf} pl (${pctAf} daño)\n`;
+                            } else {
+                                txt += `  - *${p.nombre}:* [${nivel}]\n`;
+                            }
                             if (p.observacion) txt += `    ↳ _Obs: "${p.observacion}"_\n`;
                             if (p.foto_url) txt += `    📷 _(Foto de evidencia registrada)_\n`;
                         });
@@ -6588,9 +6655,10 @@
 
         async function guardarSilenciosoRecepcionActual() {
             const variedadesListas = variedadesAgregadas.filter(v => calcularMuestreoDetallado(v).valido);
-            if (variedadesListas.length === 0) return null;
+            if (variedadesListas.length === 0) return recepcionIdActual;
 
-            const estadoAEnviar = estanTodosLosPMsCalificados() ? "COMPLETADA" : "VALIDADO_DESCARGUE";
+            const recActiva = (historialRecepciones || []).find(r => r.id === recepcionIdActual);
+            const estadoAEnviar = (recActiva && recActiva.estado_flujo === "COMPLETADA") || estanTodosLosPMsCalificados() ? "COMPLETADA" : "VALIDADO_DESCARGUE";
 
             const payload = {
                 recepcion_id: recepcionIdActual,
@@ -6624,23 +6692,34 @@
                     (data.recepciones || [data.recepcion]).forEach(r => actualizarOInsertarEnHistorialLocal(r));
                     return data.recepcion_id;
                 }
-            } catch (e) {}
-            return null;
+            } catch (e) {
+                console.warn("guardarSilenciosoRecepcionActual:", e);
+            }
+            return recepcionIdActual;
         }
 
         async function guardarYExportarExcelActual() {
-            const pmsPendientes = obtenerPMsPendientesDeCalificar();
-            if (pmsPendientes.length > 0) {
-                mostrarToast(`⚠️ Atención: Tienes productos pendientes por calificar (${pmsPendientes.join(", ")}). Valida su calificación para que el informe Excel esté completo.`, true);
+            let id = recepcionIdActual;
+            try {
+                const idGuardado = await guardarSilenciosoRecepcionActual();
+                if (idGuardado) id = idGuardado;
+            } catch (e) {
+                console.warn("guardarSilenciosoRecepcionActual:", e);
             }
-            const id = await guardarSilenciosoRecepcionActual();
+
             if (!id) {
-                mostrarToast("⚠️ Primero ingresa cuántas Bandejas o Gavetas llegaron en las variedades antes de exportar a Excel.", true);
+                mostrarToast("⚠️ No se encontró la recepción para exportar a Excel.", true);
                 return;
             }
+
+            const rec = (historialRecepciones || []).find(r => r.id === id);
+            const numFac = rec ? (rec.numero_factura || rec.codigo_guia || "").trim() : "";
+            const recsMismaFac = numFac ? (historialRecepciones || []).filter(r => (r.numero_factura || r.codigo_guia || "").trim() === numFac) : [];
+            const idsMismaFac = recsMismaFac.map(r => r.id).filter(Boolean);
+
             mostrarToast("📊 Descargando resumen de calificaciones y observaciones en Excel (.xlsx)...");
-            if (idsGuardadosFacturaActual && idsGuardadosFacturaActual.length > 1) {
-                window.location.href = `/exportar/excel/?ids=${idsGuardadosFacturaActual.join(",")}`;
+            if (idsMismaFac.length > 1) {
+                window.location.href = `/exportar/excel/?ids=${idsMismaFac.join(",")}`;
             } else {
                 window.location.href = `/exportar/excel/${id}/`;
             }
